@@ -23,7 +23,7 @@ Description: In the USA, companies file different forms with the U.S.
     keywords, provides sentiment measures, parses filing header 
     information, and provides HTML view of SEC filings.  
 License: GPL-2
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.1
 Encoding: UTF-8
 LazyData: true
 NeedsCompilation: no
