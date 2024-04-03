@@ -229,7 +229,8 @@ getFilingHeader <-
         }
         
       } else {
-        period.of.report <- ""
+        period.of.report <- NA_character_
+        filer.no <- NA_character_
         text <- ""
         header.df <-
           FilingHeaderSubFunc(text, filer.no, period.of.report)
