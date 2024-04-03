@@ -165,7 +165,7 @@ getFilings <-
         dest.filename <- paste0(new.dir2, "/", cik, "_", 
                                 f.type, "_", index.df$date.filed[i], "_", index.df$accession.number[i], 
                                 ".txt")
-        if (file.exists(dest.filename)) {
+        if (file.exists(dest.filename) && file.info(dest.filename)$size > 0) {
           index.df$status[i] <- "Download success"
         }
         else {
