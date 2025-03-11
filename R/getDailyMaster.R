@@ -24,7 +24,8 @@
 #' 
 #' output <- getDailyMaster('08/09/2016', useragent)
 #'} 
-
+#' @export
+#' @import utils
 
 getDailyMaster <- function(input.date, useragent) {
     

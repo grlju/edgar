@@ -1,9 +1,8 @@
 Package: edgar
 Type: Package
-Title: Tool for the U.S. SEC EDGAR Retrieval and Parsing of Corporate
-        Filings
-Version: 2.0.8
-Date: 2025-03-07
+Title: Tool for the U.S. SEC EDGAR Retrieval and Parsing of Corporate Filings
+Version: 2.0.9
+Date: 2025-03-12
 Authors@R: c(person(given = "Gunratan",
                     family = "Lonare",
                     role = c("aut", "cre"),
@@ -13,8 +12,9 @@ Authors@R: c(person(given = "Gunratan",
                     role = "aut",
                     email = "bharatspatil@gmail.com"))
 Maintainer: Gunratan Lonare <lonare.gunratan@gmail.com>
+Contributor: Grigorij Ljubownikow <g.ljubownikow@auckland.ac.nz>
 Depends: R (>= 3.5.0)
-Imports: R.utils, tm, XML, stringr, stringi, qdapRegex, httr
+Imports: R.utils, tm, XML, stringr, stringi, qdapRegex, httr, anytime, future.apply, progressr
 Description: In the USA, companies file different forms with the U.S. 
     Securities and Exchange Commission (SEC) through EDGAR (Electronic 
     Data Gathering, Analysis, and Retrieval system). The EDGAR 
@@ -30,9 +30,6 @@ Description: In the USA, companies file different forms with the U.S.
     information, and provides HTML view of SEC filings.  
 License: GPL-2
 RoxygenNote: 7.3.2
+Encoding: UTF-8
+LazyData: true
 NeedsCompilation: no
-Packaged: 2025-03-08 00:44:28 UTC; lonar
-Author: Gunratan Lonare [aut, cre],
-  Bharat Patil [aut]
-Repository: CRAN
-Date/Publication: 2025-03-08 01:00:02 UTC

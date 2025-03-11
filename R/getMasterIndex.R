@@ -37,6 +37,9 @@
 #' ## Downloads quarterly master index files for 2006 and 2008, and 
 #' ## stores into 2006master.Rda and 2008master.Rda files.
 #'}
+#' @export
+#' @importFrom R.utils gunzip
+#' @importFrom utils download.file
 
 getMasterIndex <- function(filing.year, useragent= "") {
   
@@ -48,26 +51,6 @@ getMasterIndex <- function(filing.year, useragent= "") {
         return()
     }
     
-  # Check the download compatibility based on OS
-  getdownCompat <- function() {
-    
-    if (nzchar(Sys.which("libcurl"))) {
-      dmethod <- "libcurl"
-    } else if (nzchar(Sys.which("wget"))) {
-      dmethod <- "wget"
-    } else if (nzchar(Sys.which("curl"))) {
-      dmethod <- "curl"
-    } else if (nzchar(Sys.which("lynx"))) {
-      dmethod <- "lynx"
-    } else if (nzchar(Sys.which("wininet"))) {
-      dmethod <- "wininet"
-    } else {
-      dmethod <- "auto"
-    }
-    
-    return(dmethod)
-  }
-  
   ### Check for valid user agent
   if(useragent != ""){
     # Check user agent
@@ -107,10 +90,10 @@ getMasterIndex <- function(filing.year, useragent= "") {
         return(FALSE)
       }
      
+
     }, error = function(e) {
       return(FALSE)
     })
-    
   }
   
     ## Check the download compatibility based on OS
@@ -150,7 +133,7 @@ getMasterIndex <- function(filing.year, useragent= "") {
             while(TRUE){
 
               res <- DownloadSECFile(link, dfile, dmethod, UA)
-            
+
               if (res){
                 
                 if (file.info(dfile)$size < 6000){

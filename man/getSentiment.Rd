@@ -86,6 +86,12 @@ need and limit your request rates, see www.sec.gov/os/accessing-edgar-data.
 }
 \examples{
 \dontrun{
+library(future.apply)
+plan(multisession, workers = availableCores()-1)
+
+# if a progress update is desired
+library(progressr)
+handlers(global = TRUE)
 
 senti.df <- getSentiment(cik.no = c('1000180', '38079'), 
                          form.type = '10-K', filing.year = 2006, useragent) 
