@@ -22,7 +22,7 @@
 #' 
 #' @param filing.year vector of four digit numeric year
 #' 
-#' @param useragent Should be in the form of "Your Name Contact@domain.com"
+#' @param useragent Should be in the form of "YourName Contact@domain.com"
 #' 
 #' @return Function returns dataframe with Form 8-K events information along with CIK
 #'  number, company name, date of filing, and accession number.
@@ -69,7 +69,6 @@ get8KItems <- function(cik.no, filing.year, useragent="") {
       for more information")
       return()
     }
-    
     
     ## Download related filings
     output <- getFilings(cik.no = cik.no, form.type = "8-K", filing.year, quarter = c(1, 2, 3, 4), 

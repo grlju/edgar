@@ -12,7 +12,7 @@ zeroes from CIKs.}
 
 \item{filing.year}{vector of four digit numeric year}
 
-\item{useragent}{Should be in the form of "Your Name Contact@domain.com"}
+\item{useragent}{Should be in the form of "YourName Contact@domain.com"}
 }
 \value{
 Function returns dataframe with Form 8-K events information along with CIK

@@ -5,15 +5,16 @@
 #' searchFilings function takes search keyword vector, CIK(s), form type(s), and 
 #' year(s) as input parameters. The function first imports available 
 #' downloaded filings in the local woking directory 
-#' 'Edgar filings_full text' created by \link[edgar]{getFilings} function; 
+#' 'edgar_Filings' created by \link[edgar]{getFilings} function; 
 #' otherwise, it automatically downloads the filings which are not already been 
 #' downloaded. It then reads the filings and searches for the input keywords. 
 #' The function returns a dataframe with filing information and the number of 
 #' keyword hits. Additionally, it saves the search information with surrounding 
 #' content of search keywords in HTML format in the new directory 
-#' "Keyword search results". These HTML view of search results would help the user 
-#' to analyze the search strategy and identify false positive hits. According 
-#' to SEC EDGAR's guidelines a user also needs to declare user agent. 
+#' "edgar_searchFilings". These HTML view of search results would help the user 
+#' to analyze the search strategy and identify false positive hits. 
+#' User must follow the US SEC's fair access policy, i.e. download only what you 
+#' need and limit your request rates, see www.sec.gov/os/accessing-edgar-data.
 #' 
 #' @usage searchFilings(cik.no, form.type, filing.year, word.list, useragent)
 #' 
@@ -27,7 +28,7 @@
 #' 
 #' @param word.list vector of words to search in the filing
 #' 
-#' @param useragent Should be in the form of "Your Name Contact@domain.com"
+#' @param useragent Should be in the form of "YourName Contact@domain.com"
 #' 
 #' @return Function returns dataframe containing filing information and the 
 #' number of word hits based on the input phrases. Additionally, this 
@@ -47,29 +48,7 @@
 #' @importFrom future.apply future_lapply
 
 searchFilings <- function(cik.no, form.type, filing.year, word.list, useragent = "") {
-  
-  ### Check for valid user agent
-  if(useragent != ""){
-    # Check user agent
-    bb <- any(grepl( "lonare.gunratan@gmail.com|glonare@uncc.edu|bharatspatil@gmail.com",
-                     useragent, ignore.case = T))
-    
-    if(bb == TRUE){
-      
-      cat("Please provide a valid User Agent. 
-      Visit https://www.sec.gov/os/accessing-edgar-data 
-      for more information")
-      return()
-    }
-    
-  }else{
-    
-    cat("Please provide a valid User Agent. 
-      Visit https://www.sec.gov/os/accessing-edgar-data 
-      for more information")
-    return()
-  }
-  
+   
   output <- getFilings(cik.no, form.type, filing.year, quarter = c(1, 2, 3, 4), 
                        downl.permit = "y", useragent)
   
@@ -89,21 +68,21 @@ searchFilings <- function(cik.no, form.type, filing.year, word.list, useragent =
     #stringr::str_count(text, word)
     occur <- unlist(gregexpr(word, f.text, ignore.case = T))
     
-    if(occur!=-1){
+    if(occur[1]!=-1){
       return(length(occur))  
     } else {
       return(0)
     }
-   
+    
   }
-	
+  
   extract_text <- function (text, word.list){
     
     extract.text.highl <- ""
     
     for(w in 1:length(word.list)){
       word <- word.list[w]
-
+      
       regex_word <- paste0(".{1,255}", word, ".{1,255}")
       extract.text <- regmatches(text, gregexpr(regex_word, text, ignore.case = T))
       extract.text <- unlist(extract.text)
@@ -120,7 +99,7 @@ searchFilings <- function(cik.no, form.type, filing.year, word.list, useragent =
     return(extract.text.highl)
   }
   
-  new.dir <- "Keyword search results"
+  new.dir <- "edgar_searchFilings"
   dir.create(new.dir)
   
   results <- future.apply::future_lapply(
@@ -134,7 +113,7 @@ searchFilings <- function(cik.no, form.type, filing.year, word.list, useragent =
     date.filed <- output$date.filed[i]
     accession.number <- output$accession.number[i]
     
-    dest.filename <- paste0(getwd(), "/", "Edgar filings_full text/Form ", f.type, 
+    dest.filename <- paste0("edgar_Filings/Form ", f.type, 
                             "/", output$cik[i], "/", output$cik[i], "_", f.type, "_", 
                             output$date.filed[i], "_", output$accession.number[i], ".txt")
     
@@ -143,14 +122,14 @@ searchFilings <- function(cik.no, form.type, filing.year, word.list, useragent =
     
     # Extract data from first <DOCUMENT> to </DOCUMENT>
     tryCatch({
-      filing.text <- filing.text[(grep("<DOCUMENT>", filing.text, ignore.case = TRUE)[1]):(grep("</DOCUMENT>", 
+      filing.text <- filing.text[(grep("<DOCUMENT>|<TEXT>", filing.text, ignore.case = TRUE)[1]):(grep("</DOCUMENT>|</TEXT>", 
                                                                                                 filing.text, ignore.case = TRUE)[1])]
     }, error = function(e) {
       filing.text <- filing.text ## In case opening and closing DOCUMENT TAG not found, cosnider full web page
     })
     
     # See if 10-K is in XLBR or old text format
-    if (any(grepl(pattern = "<xml>|<type>xml|<html>|10k.htm", filing.text, ignore.case = T))) {
+    if (any(grepl(pattern = "<xml>|<type>xml|<html>|10k.htm|<XBRL>", filing.text, ignore.case = T))) {
       
       doc <- XML::htmlParse(filing.text, asText = TRUE, useInternalNodes = TRUE, addFinalizer = TRUE)
       
@@ -162,6 +141,18 @@ searchFilings <- function(cik.no, form.type, filing.year, word.list, useragent =
       f.text <- filing.text
     }
     
+    ## In case of XBRL filings, first few lines are with "...Member" need to be deleted. 
+    if (any(grepl(pattern = "<XBRL>", filing.text, ignore.case = T))) {
+      
+      str_line <- grep("^\\s*ANNUAL REPORT.*", f.text)
+      
+      if (length(str_line) > 0) {
+        f.text <- f.text[str_line[1]: length(f.text)]  
+      }
+    }
+    
+    
+    
     # Preprocessing the filing text
     #f.text <- gsub("'s ", "", f.text)
     f.text <- gsub("\\n|\\t|,", " ", f.text)
@@ -172,7 +163,7 @@ searchFilings <- function(cik.no, form.type, filing.year, word.list, useragent =
     # f.text <- gsub("[[:digit:]]", "", f.text, perl=T)
     f.text <- iconv(f.text, from = 'UTF-8', to = 'ASCII//TRANSLIT')
     #f.text <- tolower(f.text)
-  
+    
     f.text <- gsub("\\s{2,}", " ", f.text)
     f.text <- gsub(" s ", "'s ", f.text)
     f.text <- gsub("[$ ]{2,}", " $", f.text)
@@ -241,7 +232,7 @@ searchFilings <- function(cik.no, form.type, filing.year, word.list, useragent =
   ## convert dates into R dates
   output$date.filed <- as.Date(as.character(output$date.filed), "%Y-%m-%d")
   
-  cat("Detailed search results are stored in 'Keyword search results' directory.")
+  cat("Detailed search results are stored in 'edgar_searchFilings' directory.")
   
   return(output)
 }

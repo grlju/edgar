@@ -3,8 +3,14 @@ Type: Package
 Title: Tool for the U.S. SEC EDGAR Retrieval and Parsing of Corporate Filings
 Version: 2.0.9
 Date: 2025-03-12
-Author: Gunratan Lonare <lonare.gunratan@gmail.com>, Bharat Patil
-    <bharatspatil@gmail.com>
+Authors@R: c(person(given = "Gunratan",
+                    family = "Lonare",
+                    role = c("aut", "cre"),
+                    email = "lonare.gunratan@gmail.com"),
+             person(given = "Bharat",
+                    family = "Patil",
+                    role = "aut",
+                    email = "bharatspatil@gmail.com"))
 Maintainer: Gunratan Lonare <lonare.gunratan@gmail.com>
 Contributor: Grigorij Ljubownikow <g.ljubownikow@auckland.ac.nz>
 Depends: R (>= 3.5.0)

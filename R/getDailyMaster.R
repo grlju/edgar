@@ -4,18 +4,19 @@
 #'
 #' getDailyMaster function takes date as an input parameter from a user,  
 #' and downloads master index for the date from the U.S. SEC EDGAR server 
-#' \url{https://www.sec.gov/Archives/edgar/daily-index/}. It strips headers 
+#' www.sec.gov/Archives/edgar/daily-index/. It strips headers 
 #' and converts this daily filing information into dataframe format.
-#' Function creates new directory 'Daily Indexes' into working directory 
-#' to save these downloaded daily master index files in Rda format. According to SEC 
-#' EDGAR's guidelines a user also needs to declare user agent. 
+#' Function creates new directory 'edgar_DailyMaster' into working directory 
+#' to save these downloaded daily master index files in Rda format. 
+#' User must follow the US SEC's fair access policy, i.e. download only what you 
+#' need and limit your request rates, see www.sec.gov/os/accessing-edgar-data.
 #' 
 #' @usage getDailyMaster(input.date, useragent)
 #' 
 #' @param input.date in character format 'mm/dd/YYYY'.
-#' 
-#' @param useragent Should be in the form of "Your Name Contact@domain.com"
-#' 
+#'  
+#' @param useragent Should be in the form of "YourName Contact@domain.com"
+#'  
 #' @return Function returns filings information in a dataframe format.
 #'   
 #' @examples
@@ -26,10 +27,10 @@
 #' @export
 #' @import utils
 
-getDailyMaster <- function(input.date, useragent="") {
+getDailyMaster <- function(input.date, useragent) {
     
     
-    dir.create("Daily Indexes")
+    dir.create("edgar_DailyMaster")
     
     input.date <- as.Date(input.date, "%m/%d/%Y")
     
@@ -69,7 +70,7 @@ getDailyMaster <- function(input.date, useragent="") {
       }
       
       return(dmethod)
-    }
+    }    
     
     ### Check for valid user agent
     if(useragent != ""){
@@ -93,16 +94,24 @@ getDailyMaster <- function(input.date, useragent="") {
       return()
     }
     
+    UA <- paste0("Mozilla/5.0 (", useragent, ")")
     
     
     # function to download file and return FALSE if download error
-    DownloadSECFile <- function(link, dfile, dmethod, useragent) {
+    DownloadSECFile <- function(link, dfile, dmethod, UA) {
       
       tryCatch({
-        utils::download.file(link, dfile, method = dmethod, quiet = TRUE,
-                             headers = c("User-Agent" = useragent,
-                                         "Accept-Encoding"= "deflate, gzip",
-                                         "Host"= "www.sec.gov"))
+        r <- httr::GET(link, 
+                       httr::add_headers(`Connection` = "keep-alive", `User-Agent` = UA),
+                       httr::write_disk(dfile, overwrite=TRUE)
+        )
+        
+        if(httr::status_code(r)==200){
+          return(TRUE)
+        }else{
+          return(FALSE)
+        }
+        
         return(TRUE)
       }, error = function(e) {
         return(FALSE)
@@ -111,37 +120,15 @@ getDailyMaster <- function(input.date, useragent="") {
     }
     
     
-    DownloadSECFile2 <- function(link, dfile, dmethod, useragent) {
+    DownloadSECFile2 <- function(link, dfile, dmethod, UA) {
 
-      ### Go inside a loop to download
-      i = 1
-      
-      while(TRUE){
-        
-        res <- DownloadSECFile(link, dfile, dmethod, useragent)
-        
-        if (res){
-          
-          if (file.info(dfile)$size < 6000){
-            
-            aa <- readLines(dfile)
-            
-            if(any(grepl("For security purposes, and to ensure that the service remains available to users, this government computer system", aa)) == FALSE){
-              
-              break
-            }
-            
-          }else{
-            
-            break
-          }
+        res <- DownloadSECFile(link, dfile, dmethod, UA)
+        if(res){
+          return(res)
+        }else{
+          return(FALSE)
         }
-        
-        
-        i = i + 1 
-        Sys.sleep(10) ## Wait for multiple of 10 seconds to ease request load on SEC server. 
-      }
-      return(TRUE)
+      
     }
     
     # function for downloading daily Index
@@ -151,10 +138,11 @@ getDailyMaster <- function(input.date, useragent="") {
       
         date <- paste0(year, month, day)
         
-        filename <- paste0("Daily Indexes/daily_idx_", date)
+        filename <- paste0("edgar_DailyMaster/daily_idx_", date)
         
-        link1 <- paste0("https://www.sec.gov/Archives/edgar/daily-index/master.", date, ".idx")
-        
+        link1 <- paste0("https://www.sec.gov/Archives/edgar/daily-index/", year, "/QTR", ceiling(as.integer(month)/3), 
+                        "/master.", date, ".idx")       
+                        
         link2 <- paste0("https://www.sec.gov/Archives/edgar/daily-index/", year, "/QTR", ceiling(as.integer(month)/3), 
             "/master.", date, ".idx")
         
@@ -167,20 +155,20 @@ getDailyMaster <- function(input.date, useragent="") {
         down.success = FALSE
         
         if (year < 1999) {
-          down.success <- DownloadSECFile2(link3, filename, dmethod, useragent)
+          down.success <- DownloadSECFile2(link3, filename, dmethod, UA)
         }
         
         if (year > 1998 && year < 2012) {
-          down.success <- DownloadSECFile2(link4, filename, dmethod, useragent)
+          down.success <- DownloadSECFile2(link4, filename, dmethod, UA)
         }
         
         if (year > 2011) {
-            fun.return1 <- DownloadSECFile2(link1, filename, dmethod, useragent)
+            fun.return1 <- DownloadSECFile2(link1, filename, dmethod, UA)
             if (fun.return1 && file.size(filename) > 500) {
                 down.success = TRUE
                 
             } else {
-                fun.return2 <- DownloadSECFile2(link2, filename, dmethod, useragent)
+                fun.return2 <- DownloadSECFile2(link2, filename, dmethod, UA)
                 if (fun.return2) {
                   down.success = TRUE
                 }
@@ -191,6 +179,8 @@ getDailyMaster <- function(input.date, useragent="") {
             
             # Removing ''' so that scan with '|' not fail due to occurrence of ''' in company name
             temp.data <- gsub("'", "", readLines(filename))
+			temp.data <- iconv(temp.data, "latin1", "ASCII", sub = "")
+
             # writting back to storage
             writeLines(temp.data, filename)
             

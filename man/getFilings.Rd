@@ -23,7 +23,7 @@ asks a user permission to download fillings. This permission helps the user
 to decide in case if number of filings are large. Setting downl.permit = "y"
 will not ask for user permission to download filings.}
 
-\item{useragent}{Should be in the form of "Your Name Contact@domain.com"}
+\item{useragent}{Should be in the form of "YourName Contact@domain.com"}
 }
 \value{
 Function downloads EDGAR filings and returns download status in dataframe
