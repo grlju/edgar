@@ -1,4 +1,4 @@
-# edgar 2.0.7
+# edgar 2.0.9
 Tool for the U.S. SEC EDGAR Retrieval and Parsing of Corporate Filings
 
 # Overview
@@ -15,7 +15,7 @@ library("edgar")
 ```
 
 The package is maintained on
-[github](https://github.com/Gunratan/edgar).
+[github](https://github.com/grlju/edgar).
 
 # Implementation of the edgar package
 

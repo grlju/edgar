@@ -23,7 +23,7 @@
 #' @param filing.year vector of four digit numeric year
 #'
 #' @param quarter vector of one digit quarter integer number. By deault, it is kept
-#' as c(1 ,2, 3, 4).
+#' as c(1, 2, 3, 4).
 #'
 #' @param downl.permit "y" or "n". The default value of downl.permit is "n". It
 #' asks a user permission to download fillings. This permission helps the user
@@ -46,8 +46,8 @@
 #'                      2006, quarter = c(1, 2, 3), downl.permit = "n", useragent)
 #'
 #' ## download '10-Q' and '10-K' filings filed by the firm with
-#' CIK = 1000180 in quarters 1, 2, and 3 of the year 2006. These
-#' filings will be stored in the current working directory.
+#' ## CIK = 1000180 in quarters 1, 2, and 3 of the year 2006. These
+#' ## filings will be stored in the current working directory.
 #'
 #' output <- getFilings(cik.no = 1000180, c('10-K','10-Q'),
 #'                      2006, quarter = c(1, 2, 3), downl.permit = "y", useragent)
@@ -141,8 +141,6 @@ getFilings <-
     }
     if (as.character(downl.permit) == "y") {
       dir.create("Edgar filings_full text")
-      cat("Downloading fillings. Please wait...", "\n")
-      p <- progressr::progressor(along = 1:nrow(index.df))
       
       index.df$edgar.link <- as.character(index.df$edgar.link)
       accessions <- do.call(rbind.data.frame, strsplit(index.df$edgar.link, 
@@ -151,6 +149,8 @@ getFilings <-
                                                                  1])
       row.names(index.df) <- c(1:nrow(index.df))
       index.df$status <- NA
+      p <- progressor(along = 1:total.files)
+      
       for (i in 1:total.files) {
         edgar.link <- paste0("https://www.sec.gov/Archives/", 
                              index.df$edgar.link[i])
@@ -195,7 +195,7 @@ getFilings <-
             Sys.sleep(6)
           }
         }
-        if (i %% 10 == 0) {p()}
+        p()
       }
       index.df$edgar.link <- NULL
       return(index.df)

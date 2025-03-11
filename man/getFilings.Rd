@@ -54,8 +54,8 @@ output <- getFilings(cik.no = c(1000180, 38079), c('10-K','10-Q'),
                      2006, quarter = c(1, 2, 3), downl.permit = "n", useragent)
 
 ## download '10-Q' and '10-K' filings filed by the firm with
-CIK = 1000180 in quarters 1, 2, and 3 of the year 2006. These
-filings will be stored in the current working directory.
+## CIK = 1000180 in quarters 1, 2, and 3 of the year 2006. These
+## filings will be stored in the current working directory.
 
 output <- getFilings(cik.no = 1000180, c('10-K','10-Q'),
                      2006, quarter = c(1, 2, 3), downl.permit = "y", useragent)

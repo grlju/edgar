@@ -152,7 +152,8 @@ getFilingHeaderForm13 <-
       # Read filing
       filing.text <- readLines(dest.filename)
       
-      p(message = print(dest.filename))
+      # use for debugging individual files
+      #p(message = print(dest.filename))
       
       main.df <- output[i, ]
       
@@ -289,7 +290,7 @@ getFilingHeaderForm13 <-
       } else {
         period.of.report <- ""
         text <- ""
-        filer.no <- NA
+        filer.no <- NA_character_
         header.df <-
           FilingHeaderSubFunc(text, filer.no, period.of.report)
         header.df$filer.type <- ""
@@ -320,6 +321,9 @@ getFilingHeaderForm13 <-
       
       combined.df[!combined.df$mail.state %in% tolower(states$state_abb), "mail.state"] <-
         NA_character_
+      
+      # update progress
+      p()
       
       return(combined.df)
   
