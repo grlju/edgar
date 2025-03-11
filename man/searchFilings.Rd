@@ -17,7 +17,7 @@ form.type = 'ALL' if need to download all forms.}
 
 \item{word.list}{vector of words to search in the filing}
 
-\item{useragent}{Should be in the form of "Your Name Contact@domain.com"}
+\item{useragent}{Should be in the form of "YourName Contact@domain.com"}
 }
 \value{
 Function returns dataframe containing filing information and the 
@@ -32,15 +32,16 @@ search keywords in HTML file in directory "Keyword search results".
 searchFilings function takes search keyword vector, CIK(s), form type(s), and 
 year(s) as input parameters. The function first imports available 
 downloaded filings in the local woking directory 
-'Edgar filings_full text' created by \link[edgar]{getFilings} function; 
+'edgar_Filings' created by \link[edgar]{getFilings} function; 
 otherwise, it automatically downloads the filings which are not already been 
 downloaded. It then reads the filings and searches for the input keywords. 
 The function returns a dataframe with filing information and the number of 
 keyword hits. Additionally, it saves the search information with surrounding 
 content of search keywords in HTML format in the new directory 
-"Keyword search results". These HTML view of search results would help the user 
-to analyze the search strategy and identify false positive hits. According 
-to SEC EDGAR's guidelines a user also needs to declare user agent.
+"edgar_searchFilings". These HTML view of search results would help the user 
+to analyze the search strategy and identify false positive hits. 
+User must follow the US SEC's fair access policy, i.e. download only what you 
+need and limit your request rates, see www.sec.gov/os/accessing-edgar-data.
 }
 \examples{
 \dontrun{

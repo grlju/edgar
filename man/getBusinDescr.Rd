@@ -12,7 +12,7 @@ zeroes from a CIK number. cik.no = 'ALL' conisders all the CIKs.}
 
 \item{filing.year}{vector of four digit numeric year}
 
-\item{useragent}{Should be in the form of "Your Name Contact@domain.com"}
+\item{useragent}{Should be in the form of "YourName Contact@domain.com"}
 }
 \value{
 Function saves scrapped business description section from annual 
@@ -32,19 +32,20 @@ filing information. The function imports annual filings (10-K statements) downlo
 via \link[edgar]{getFilings} function; otherwise, it automates the downloading process 
 if not already been downloaded. It then reads the downloaded statements, cleans HTML tags, 
 and parse the contents. This function automatically creates a new directory with 
-the name "Business descriptions text" in the current working directory and 
+the name "edgar_BusinDescr" in the current working directory and 
 saves scrapped business description sections in this directory. It considers "10-K", 
-"10-K405", "10KSB", and "10KSB40" form types as annual statements. According to 
-SEC EDGAR's guidelines a user also needs to declare user agent.
+"10-K405", "10KSB", and "10KSB40" form types as annual statements. 
+User must follow the US SEC's fair access policy, i.e. download only what you 
+need and limit your request rates, see www.sec.gov/os/accessing-edgar-data.
 }
 \examples{
 \dontrun{
 
 output <- getBusinDescr(cik.no = c(1000180, 38079), filing.year = 2005, useragent)
 ## saves scrapped "Item 1" section from 10-K filings for CIKs in 
-"Business descriptions text" directory present 
-in the working directory. Also, it provides filing information in 
-the output datframe.
+## "Business descriptions text" directory present 
+## in the working directory. Also, it provides filing information in 
+## the output datframe.
 
 output <- getBusinDescr(cik.no = c(1000180, 38079), 
                         filing.year = c(2005, 2006), useragent)

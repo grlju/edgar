@@ -3,12 +3,13 @@
 #' \code{getFilingHeader} Extract EDGAR filing header information
 #'
 #' getFilingHeader function takes CIK(s), form type(s), and year(s) as input parameters.  
-#' The function first imports available downloaded filings in local woking directory 
-#' 'Edgar filings_full text' created by \link[edgar]{getFilings} function; 
+#' The function first imports available downloaded filings in local working directory 
+#' 'edgar_Filings' created by \link[edgar]{getFilings} function; 
 #' otherwise, it automatically downloads the filings which are not already been 
 #' downloaded. It then parses all the important header information from filings.
-#' The function returns a dataframe with filing and header information. According 
-#' to SEC EDGAR's guidelines a user also needs to declare user agent.
+#' The function returns a dataframe with filing and header information. 
+#' User must follow the US SEC's fair access policy, i.e. download only what you 
+#' need and limit your request rates, see www.sec.gov/os/accessing-edgar-data.
 #' 
 #' @usage getFilingHeader(cik.no, form.type, filing.year, useragent)
 #' 
@@ -20,7 +21,7 @@
 #'
 #' @param filing.year vector of four digit numeric year
 #' 
-#' @param useragent Should be in the form of "Your Name Contact@domain.com"
+#' @param useragent Should be in the form of "YourName Contact@domain.com"
 #' 
 #' @return Function returns dataframe containing CIK number, company name, 
 #' date of filing, accession number, confirmed period of report, fiscal year end,
@@ -41,30 +42,7 @@
 #'}
 
 getFilingHeader <- function(cik.no, form.type, filing.year, useragent="") {
-    
-    
-    ### Check for valid user agent
-    if(useragent != ""){
-        # Check user agent
-        bb <- any(grepl( "lonare.gunratan@gmail.com|glonare@uncc.edu|bharatspatil@gmail.com",
-                         useragent, ignore.case = T))
-        
-        if(bb == TRUE){
-            
-            cat("Please provide a valid User Agent. 
-      Visit https://www.sec.gov/os/accessing-edgar-data 
-      for more information")
-            return()
-        }
-        
-    }else{
-        
-        cat("Please provide a valid User Agent. 
-      Visit https://www.sec.gov/os/accessing-edgar-data 
-      for more information")
-        return()
-    }
-    
+  
     output <- getFilings(cik.no, form.type, filing.year, 
                          quarter = c(1, 2, 3, 4), downl.permit = "y", useragent)
     
@@ -314,7 +292,7 @@ getFilingHeader <- function(cik.no, form.type, filing.year, useragent="") {
         
         f.type <- gsub("/", "", output$form.type[i])
         
-        dest.filename <- paste0("Edgar filings_full text/Form ", f.type, 
+        dest.filename <- paste0("edgar_Filings/Form ", f.type, 
                                 "/", output$cik[i], "/", output$cik[i], "_", 
                                 f.type, "_", output$date.filed[i], 
                                 "_", output$accession.number[i], ".txt")
@@ -393,8 +371,7 @@ getFilingHeader <- function(cik.no, form.type, filing.year, useragent="") {
     ## Clean SIC CODE 
     main.output$sic <- gsub("\\", "", main.output$sic, fixed = TRUE)
     main.output$sic <- gsub("'|/|,", "", main.output$sic)
-    main.output$sic <- regmatches(main.output$sic, 
-                                  gregexpr("[[:digit:]]+", main.output$sic))[[1]]
+    main.output$sic <- unlist(regmatches(main.output$sic, gregexpr("[[:digit:]]+", main.output$sic)))
 
     ## convert dates into R datee
     main.output$date.filed <- as.Date(as.character(main.output$date.filed), "%Y-%m-%d")

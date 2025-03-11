@@ -8,8 +8,9 @@
 #' filing information. The function searches and imports existing downloaded 
 #' 8-K filings in the current directory; otherwise it downloads them using 
 #' \link[edgar]{getFilings} function. It then reads the 8-K filings and parses them 
-#' to extract events information. According to SEC EDGAR's guidelines a user also needs to 
-#' declare user agent. 
+#' to extract events information.
+#' User must follow the US SEC's fair access policy, i.e. download only what you 
+#' need and limit your request rates, see www.sec.gov/os/accessing-edgar-data. 
 #' 
 #' @usage get8KItems(cik.no, filing.year, useragent)
 #' 
@@ -18,7 +19,7 @@
 #' 
 #' @param filing.year vector of four digit numeric year
 #' 
-#' @param useragent Should be in the form of "Your Name Contact@domain.com"
+#' @param useragent Should be in the form of "YourName Contact@domain.com"
 #' 
 #' @return Function returns dataframe with Form 8-K events information along with CIK
 #'  number, company name, date of filing, and accession number.
@@ -59,7 +60,6 @@ get8KItems <- function(cik.no, filing.year, useragent="") {
       return()
     }
     
-    
     ## Download related filings
     output <- getFilings(cik.no = cik.no, form.type = "8-K", filing.year, quarter = c(1, 2, 3, 4), 
 	                     downl.permit = "y", useragent)
@@ -77,7 +77,7 @@ get8KItems <- function(cik.no, filing.year, useragent="") {
     
     for (i in 1:nrow(output)) {
         
-        dest.filename <- paste0("Edgar filings_full text/Form ", f.type, 
+        dest.filename <- paste0("edgar_Filings/Form ", f.type, 
                               "/", output$cik[i], "/", output$cik[i], "_", f.type, "_", 
                               output$date.filed[i], "_", output$accession.number[i], ".txt")
         

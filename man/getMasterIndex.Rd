@@ -9,7 +9,7 @@ getMasterIndex(filing.year, useragent)
 \arguments{
 \item{filing.year}{vector of integer containing filing years.}
 
-\item{useragent}{Should be in the form of "Your Name Contact@domain.com"}
+\item{useragent}{Should be in the form of "YourName Contact@domain.com"}
 }
 \value{
 Function downloads quarterly master index files and stores them 
@@ -21,27 +21,28 @@ into the mentioned directory.
 \details{
 getMasterIndex function takes filing year as an input parameter from a user,  
 downloads quarterly master indexes from the US SEC server.
-\url{https://www.sec.gov/Archives/edgar/full-index/}. It then strips headers from the 
+www.sec.gov/Archives/edgar/full-index/. It then strips headers from the 
 master index files, converts them into dataframe, and 
 merges such quarterly dataframes into yearly dataframe, and stores them 
 in Rda format. It has ability to download master indexes for multiple years 
-based on the user input. This function creates a new directory 'Master Indexes' 
+based on the user input. This function creates a new directory 'edgar_MasterIndex' 
 into current working directory to save these Rda Master Index. Please note, for 
 all other functions in this package need to locate the same working 
-directory to access these Rda master index files. According to SEC 
-EDGAR's guidelines a user also needs to declare user agent.
+directory to access these Rda master index files. 
+User must follow the US SEC's fair access policy, i.e. download only what you 
+need and limit your request rates, see www.sec.gov/os/accessing-edgar-data.
 }
 \examples{
 \dontrun{
 
-useragent <- "Your Name Contact@domain.com"
+useragent <- "YourName Contact@domain.com"
 
 getMasterIndex(2006, useragent) 
 ## Downloads quarterly master index files for 2006 and 
-stores into yearly 2006master.Rda file.
+## stores into yearly 2006master.Rda file.
 
 getMasterIndex(c(2006, 2008), useragent) 
 ## Downloads quarterly master index files for 2006 and 2008, and 
-stores into 2006master.Rda and 2008master.Rda files.
+## stores into 2006master.Rda and 2008master.Rda files.
 }
 }

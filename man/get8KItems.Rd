@@ -12,7 +12,7 @@ zeroes from CIKs.}
 
 \item{filing.year}{vector of four digit numeric year}
 
-\item{useragent}{Should be in the form of "Your Name Contact@domain.com"}
+\item{useragent}{Should be in the form of "YourName Contact@domain.com"}
 }
 \value{
 Function returns dataframe with Form 8-K events information along with CIK
@@ -28,8 +28,9 @@ a user and provides information on the Form 8-K triggering events along with the
 filing information. The function searches and imports existing downloaded 
 8-K filings in the current directory; otherwise it downloads them using 
 \link[edgar]{getFilings} function. It then reads the 8-K filings and parses them 
-to extract events information. According to SEC EDGAR's guidelines a user also needs to 
-declare user agent.
+to extract events information.
+User must follow the US SEC's fair access policy, i.e. download only what you 
+need and limit your request rates, see www.sec.gov/os/accessing-edgar-data.
 }
 \examples{
 \dontrun{

@@ -9,11 +9,11 @@
 #' filing information. The function imports annual filings downloaded 
 #' via \link[edgar]{getFilings} function; otherwise, it downloads the filings which are 
 #' not already been downloaded. It then reads, cleans, and parse the required section 
-#' from the filings. It creates a new directory with the name "MD&A section text" 
+#' from the filings. It creates a new directory with the name "edgar_MgmtDisc" 
 #' in the current working directory to save scrapped "Item 7" sections in text format. 
 #' It considers "10-K", "10-K405", "10KSB", and "10KSB40" form types as annual statements. 
-#' According to SEC EDGAR's guidelines a user also needs to declare user agent. 
-#' 
+#' User must follow the US SEC's fair access policy, i.e. download only what you 
+#' need and limit your request rates, see www.sec.gov/os/accessing-edgar-data.
 #'   
 #' @usage getMgmtDisc(cik.no, filing.year, useragent)
 #' 
@@ -22,7 +22,7 @@
 #' 
 #' @param filing.year vector of four digit numeric year
 #' 
-#' @param useragent Should be in the form of "Your Name Contact@domain.com"
+#' @param useragent Should be in the form of "YourName Contact@domain.com"
 #' 
 #' @return Function saves scrapped "Item 7" section from annual filings in 
 #' "MD&A section text" directory present in the working directory. 
@@ -36,40 +36,16 @@
 #' output <- getMgmtDisc(cik.no = c(1000180, 38079), filing.year = 2005, useragent)
 #' 
 #' ## saves scrapped "Item 7" section from 10-K filings for CIKs in 
-#' "MD&A section text" directory present in the working directory. 
-#' Also, it provides filing information in the output datframe.
+#' ## "MD&A section text" directory present in the working directory. 
+#' ## Also, it provides filing information in the output datframe.
 #' 
 #' output <- getMgmtDisc(cik.no = c(1000180, 38079), 
 #'                       filing.year = c(2005, 2006), useragent)
 #'}
 
 getMgmtDisc <- function(cik.no, filing.year, useragent="" ) {
-    
   
-  ### Check for valid user agent
-  if(useragent != ""){
-    # Check user agent
-    bb <- any(grepl( "lonare.gunratan@gmail.com|glonare@uncc.edu|bharatspatil@gmail.com",
-                     useragent, ignore.case = T))
-    
-    if(bb == TRUE){
-      
-      cat("Please provide a valid User Agent. 
-      Visit https://www.sec.gov/os/accessing-edgar-data 
-      for more information")
-      return()
-    }
-    
-  }else{
-    
-    cat("Please provide a valid User Agent. 
-      Visit https://www.sec.gov/os/accessing-edgar-data 
-      for more information")
-    return()
-  }
-  
-  
-    f.type <- c("10-K", "10-K405","10KSB", "10KSB40")
+    f.type <- c("10-K", "10-K405","10KSB", "10-KSB", "10KSB40")
     # 10-K, 10-K405, 10-KSB, 10-KT, 10KSB, 10KSB40, and 10KT405 filings in the EDGAR database
 
     # Check the year validity
@@ -104,7 +80,7 @@ getMgmtDisc <- function(cik.no, filing.year, useragent="" ) {
       return(text)
     }
 
-    new.dir <- paste0("MD&A section text")
+    new.dir <- paste0("edgar_MgmtDisc")
     dir.create(new.dir)
     
     output$extract.status <- 0
@@ -120,9 +96,19 @@ getMgmtDisc <- function(cik.no, filing.year, useragent="" ) {
         date.filed <- output$date.filed[i]
         accession.number <- output$accession.number[i]
         
-        dest.filename <- paste0("Edgar filings_full text/Form ", f.type, 
+        dest.filename <- paste0("edgar_Filings/Form ", f.type, 
                                 "/", cik, "/", cik, "_", f.type, "_", 
                                 date.filed, "_", accession.number, ".txt")
+								
+		## This is for output Item 7 file path
+		filename2 <- paste0(new.dir, '/',cik, "_", f.type, "_", date.filed, 
+                            "_", accession.number, ".txt")
+							
+		if(file.exists(filename2)){
+			output$extract.status[i] <- 1
+			next
+		}
+	
         # Read filing
         filing.text <- readLines(dest.filename)
         
@@ -135,17 +121,17 @@ getMgmtDisc <- function(cik.no, filing.year, useragent="" ) {
         })
         
         # See if 10-K is in XLBR or old text format
-        if (any(grepl(pattern = "<xml>|<type>xml|<html>|10k.htm", filing.text, ignore.case = T))) {
+        if (any(grepl(pattern = "<xml>|<type>xml|<html>|10k.htm|<XBRL>", filing.text, ignore.case = T))) {
             
-            doc <- XML::htmlParse(filing.text, asText = TRUE, useInternalNodes = TRUE, addFinalizer = FALSE)
-            
-            f.text <- XML::xpathSApply(doc, "//text()[not(ancestor::script)][not(ancestor::style)][not(ancestor::noscript)][not(ancestor::form)]", 
-                XML::xmlValue)
-            
-            f.text <- iconv(f.text, "latin1", "ASCII", sub = " ")
-			
-			      ## Free up htmlParse document to avoid memory leakage, this calls C function
-            #.Call('RS_XML_forceFreeDoc', doc, package= 'XML')
+          doc <- XML::htmlParse(filing.text, asText = TRUE, useInternalNodes = TRUE, addFinalizer = FALSE)
+                      
+          f.text <- XML::xpathSApply(doc, "//text()[not(ancestor::script)][not(ancestor::style)][not(ancestor::noscript)][not(ancestor::form)]", 
+          XML::xmlValue)
+                      
+          f.text <- iconv(f.text, "latin1", "ASCII", sub = " ")
+          			
+          ## Free up htmlParse document to avoid memory leakage, this calls C function
+          #.Call('RS_XML_forceFreeDoc', doc, package= 'XML')
             
         } else {
             f.text <- filing.text
@@ -235,8 +221,8 @@ getMgmtDisc <- function(cik.no, filing.year, useragent="" ) {
         }
         
         if( (!is.na(md.dicusssion)) & (words.count>100)){
-          filename2 <- paste0(new.dir, '/',cik, "_", f.type, "_", date.filed, 
-                              "_", accession.number, ".txt")
+          #filename2 <- paste0(new.dir, '/',cik, "_", f.type, "_", date.filed, 
+          #                    "_", accession.number, ".txt")
           
           writeLines(md.dicusssion, filename2)
           output$extract.status[i] <- 1
@@ -256,7 +242,7 @@ getMgmtDisc <- function(cik.no, filing.year, useragent="" ) {
     output$filing.year <- NULL
     names(output)[names(output) == 'status'] <- 'downld.status'
     
-    cat("MD&A section texts are stored in 'MD&A section text' directory.")
+    cat("MD&A section texts are stored in 'edgar_MgmtDisc' directory.")
     
     return(output)
 }

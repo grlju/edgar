@@ -7,11 +7,12 @@
 #' filing as input. The function imports edgar filings downloaded 
 #' via \link[edgar]{getFilings} function; otherwise, it downloads the filings which are 
 #' not already been downloaded. It then reads the downloaded filings, scraps filing text
-#' excluding exhibits, and saves the filing contents in 'Edgar filings_HTML view' 
-#' directory in HTML format. The new directory 'Edgar filings_HTML view' will be 
-#' automatically created by this function. According to SEC EDGAR's guidelines a 
-#' user also needs to declare user agent. 
-#' 
+#' excluding exhibits, and saves the filing contents in 'edgar_FilingsHTML' 
+#' directory in HTML format. The new directory 'edgar_FilingsHTML' will be 
+#' automatically created by this function. 
+#' User must follow the US SEC's fair access policy, i.e. download only what you 
+#' need and limit your request rates, see www.sec.gov/os/accessing-edgar-data.
+#'
 #' @usage getFilingsHTML(cik.no, form.type, filing.year, quarter, useragent)
 #'
 #' @param cik.no vector of CIK number of firms in integer format. Suppress leading 
@@ -25,7 +26,7 @@
 #' @param quarter vector of one digit quarter integer number. By deault, it is kept
 #' as c(1 ,2, 3, 4).
 #' 
-#' @param useragent Should be in the form of "Your Name Contact@domain.com"
+#' @param useragent Should be in the form of "YourName Contact@domain.com"
 #'         
 #' @return Function saves EDGAR filings in HTML format and returns filing information 
 #' in dataframe format.
@@ -37,8 +38,8 @@
 #'                          2006, quarter = c(1, 2, 3), useragent)
 #' 
 #' ## download '10-Q' and '10-K' filings filed by the firm with 
-#' CIK = 1000180 in quarters 1,2, and 3 of the year 2006. These filings 
-#' will be stored in the current working directory.
+#' ## CIK = 1000180 in quarters 1,2, and 3 of the year 2006. These filings 
+#' ## will be stored in the current working directory.
 #' 
 #' }
 
@@ -48,28 +49,6 @@ getFilingsHTML <- function(cik.no = "ALL", form.type = "ALL", filing.year,
   # Check the year validity
   if (!is.numeric(filing.year)) {
     cat("Please check the input year.")
-    return()
-  }
-  
-  ### Check for valid user agent
-  if(useragent != ""){
-    # Check user agent
-    bb <- any(grepl( "lonare.gunratan@gmail.com|glonare@uncc.edu|bharatspatil@gmail.com",
-                     useragent, ignore.case = T))
-    
-    if(bb == TRUE){
-      
-      cat("Please provide a valid User Agent. 
-      Visit https://www.sec.gov/os/accessing-edgar-data 
-      for more information")
-      return()
-    }
-    
-  }else{
-    
-    cat("Please provide a valid User Agent. 
-      Visit https://www.sec.gov/os/accessing-edgar-data 
-      for more information")
     return()
   }
   
@@ -86,7 +65,7 @@ getFilingsHTML <- function(cik.no = "ALL", form.type = "ALL", filing.year,
   
   progress.bar <- txtProgressBar(min = 0, max = nrow(output), style = 3)
   
-  dir.create("Edgar filings_HTML view")
+  dir.create("edgar_FilingsHTML")
   
   for (i in 1:nrow(output)) {
     f.type <- gsub("/", "", output$form.type[i])
@@ -95,7 +74,7 @@ getFilingsHTML <- function(cik.no = "ALL", form.type = "ALL", filing.year,
     date.filed <- output$date.filed[i]
     accession.number <- output$accession.number[i]
     
-    dest.filename <- paste0("Edgar filings_full text/Form ", f.type, 
+    dest.filename <- paste0("edgar_Filings/Form ", f.type, 
                             "/", cik, "/", cik, "_", f.type, "_", 
                             date.filed, "_", accession.number, ".txt")
     # Read filing
@@ -110,8 +89,8 @@ getFilingsHTML <- function(cik.no = "ALL", form.type = "ALL", filing.year,
     })
 
     
-    if(!grepl(pattern ='<xml>|<type>xml|<html>', filing.text, ignore.case=T)){
-      
+    if( any( !grepl(pattern ='<xml>|<type>xml|<html>|<XBRL>', filing.text, ignore.case=T) ) ){
+          
       filing.text <- gsub("\t"," ", filing.text)
       filing.text <- gsub("<CAPTION>|<S>|<C>", "", filing.text, ignore.case = T)
       ## Append with PRE to keep the text format as it is
@@ -119,7 +98,7 @@ getFilingsHTML <- function(cik.no = "ALL", form.type = "ALL", filing.year,
     }
 
     ## Form new dir and filename
-    new.dir <- paste0("Edgar filings_HTML view/Form ", f.type)
+    new.dir <- paste0("edgar_FilingsHTML/Form ", f.type)
     dir.create(new.dir)
     new.dir2 <- paste0(new.dir, "/", cik)
     dir.create(new.dir2)
@@ -145,7 +124,7 @@ getFilingsHTML <- function(cik.no = "ALL", form.type = "ALL", filing.year,
   output$filing.year <- NULL
   names(output)[names(output) == 'status'] <- 'downld.status'
   
-  cat("HTML filings are stored in 'Edgar filings_HTML view' directory.")
+  cat("HTML filings are stored in 'edgar_FilingsHTML' directory.")
   
   return(output)
 }

@@ -4,11 +4,12 @@
 #' filing year and quarter of the filing.
 #'
 #' getFilings function takes CIKs, form type, filing year, and quarter of the 
-#' filing as input. It creates new directory "Edgar filings_full text" to 
+#' filing as input. It creates new directory "edgar_Filings" to 
 #' store all downloaded filings. All the filings will be stored in the 
 #' current working directory. Keep the same current working directory for 
-#' further process. According to SEC EDGAR's guidelines a user also needs to 
-#' declare user agent.  
+#' further process. 
+#' User must follow the US SEC's fair access policy, i.e. download only what you 
+#' need and limit your request rates, see www.sec.gov/os/accessing-edgar-data.
 #' 
 #' @usage getFilings(cik.no, form.type, filing.year, quarter, downl.permit, useragent)
 #'
@@ -28,7 +29,7 @@
 #' to decide in case if number of filings are large. Setting downl.permit = "y" 
 #' will not ask for user permission to download filings. 
 #' 
-#' @param useragent Should be in the form of "Your Name Contact@domain.com"
+#' @param useragent Should be in the form of "YourName Contact@domain.com"
 #' 
 #' @return Function downloads EDGAR filings and returns download status in dataframe 
 #' format with CIK, company name, form type, date filed, accession number, and 
@@ -41,8 +42,8 @@
 #'                      2006, quarter = c(1, 2, 3), downl.permit = "n", useragent)
 #'                      
 #' ## download '10-Q' and '10-K' filings filed by the firm with 
-#' CIK = 1000180 in quarters 1,2, and 3 of the year 2006. These 
-#' filings will be stored in the current working directory.
+#' ## CIK = 1000180 in quarters 1,2, and 3 of the year 2006. These 
+#' ## filings will be stored in the current working directory.
 #' 
 #' }
 
@@ -84,7 +85,7 @@ getFilings <- function(cik.no = "ALL", form.type = "ALL", filing.year, quarter =
     
     return(dmethod)
   }
-  
+   
   ### Check for valid user agent
   if(useragent != ""){
     # Check user agent
@@ -107,15 +108,25 @@ getFilings <- function(cik.no = "ALL", form.type = "ALL", filing.year, quarter =
     return()
   }
   
+  UA <- paste0("Mozilla/5.0 (", useragent, ")")
+  
+  
   # function to download file and return FALSE if download error
-  DownloadSECFile <- function(link, dfile, dmethod, useragent) {
+  DownloadSECFile <- function(link, dfile, dmethod, UA) {
     
     tryCatch({
-      utils::download.file(link, dfile, method = dmethod, quiet = TRUE,
-                           headers = c("User-Agent" = useragent,
-                                       "Accept-Encoding"= "deflate, gzip",
-                                       "Host"= "www.sec.gov"))
-      return(TRUE)
+      
+      r <- httr::GET(link, 
+                     httr::add_headers(`Connection` = "keep-alive", `User-Agent` = UA),
+                     httr::write_disk(dfile, overwrite=TRUE)
+      )
+      
+      if(httr::status_code(r)==200){
+        return(TRUE)
+      }else{
+        return(FALSE)
+      }
+      
     }, error = function(e) {
       return(FALSE)
     })
@@ -132,7 +143,7 @@ getFilings <- function(cik.no = "ALL", form.type = "ALL", filing.year, quarter =
     
     yr.master <- paste0(year, "master.Rda")  ## Create specific year .Rda filename.
     
-    filepath <- paste0("Master Indexes/", yr.master)
+    filepath <- paste0("edgar_MasterIndex/", yr.master)
     
     if (!file.exists(filepath)) {
       getMasterIndex(year, useragent)  # download master index
@@ -181,7 +192,7 @@ getFilings <- function(cik.no = "ALL", form.type = "ALL", filing.year, quarter =
   
   if (as.character(downl.permit) == "y") {
     
-    dir.create("Edgar filings_full text")
+    dir.create("edgar_Filings")
     
     cat("Downloading fillings. Please wait...", "\n")
     
@@ -209,7 +220,7 @@ getFilings <- function(cik.no = "ALL", form.type = "ALL", filing.year, quarter =
       year <- index.df$filing.year[i]
       cik <- index.df$cik[i]
         
-      new.dir <- paste0("Edgar filings_full text/Form ", f.type)
+      new.dir <- paste0("edgar_Filings/Form ", f.type)
       dir.create(new.dir)
       new.dir2 <- paste0(new.dir, "/", cik)
       dir.create(new.dir2)
@@ -229,7 +240,7 @@ getFilings <- function(cik.no = "ALL", form.type = "ALL", filing.year, quarter =
         
         while(TRUE){
           
-          res <- DownloadSECFile(edgar.link, dest.filename, dmethod, useragent)
+          res <- DownloadSECFile(edgar.link, dest.filename, dmethod, UA)
           
           if (res){
             
@@ -247,7 +258,7 @@ getFilings <- function(cik.no = "ALL", form.type = "ALL", filing.year, quarter =
             }else{
               
               index.df$status[i] <- "Download success"
-              
+              Sys.sleep(1)
               break
             }
           }
@@ -259,7 +270,7 @@ getFilings <- function(cik.no = "ALL", form.type = "ALL", filing.year, quarter =
           }
           
           k = k + 1
-          Sys.sleep(10) ## Wait for multiple of 10 seconds to ease request load on SEC server. 
+          Sys.sleep(3) ## Wait for multiple of 3 seconds to ease request load on SEC server. 
         }
         
       }
