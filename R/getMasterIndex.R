@@ -43,40 +43,23 @@
 
 getMasterIndex <- function(filing.year, useragent= "") {
   
-    options(warn = -1)
-    
-    # Check year validity
-    if (any(is.na(as.numeric(filing.year)))) {
-        cat("Please provide valid year.")
-        return()
-    }
-    
+  options(warn = -1)
+  
   ### Check for valid user agent
-  if(useragent != ""){
-    # Check user agent
-    bb <- any(grepl( "lonare.gunratan@gmail.com|glonare@uncc.edu|bharatspatil@gmail.com",
-                     useragent, ignore.case = T))
-    
-    if(bb == TRUE){
-      
-      cat("Please provide a valid User Agent. 
-      Visit https://www.sec.gov/os/accessing-edgar-data 
-      for more information")
-      return()
-    }
-    
-  }else{
-    
-    cat("Please provide a valid User Agent. 
-      Visit https://www.sec.gov/os/accessing-edgar-data 
-      for more information")
-    return()
+  if (is.null(useragent)) {
+    stop(
+      "You must provide a valid 'useragent' in the form of 'Your Name Contact@domain.com'.
+       Visit https://www.sec.gov/os/accessing-edgar-data for more information"
+    )
+  }
+  if (!is.numeric(filing.year)) {
+    stop("Input year(s) is not numeric.")
   }
   
   UA <- paste0("Mozilla/5.0 (", useragent, ")")
   
   # function to download file and return FALSE if download error
-  DownloadSECFile <- function(link, dfile, dmethod, UA) {
+  DownloadSECFile <- function(link, dfile, UA) {
     
     tryCatch({
       r <- httr::GET(link, 
@@ -96,9 +79,6 @@ getMasterIndex <- function(filing.year, useragent= "") {
     })
   }
   
-    ## Check the download compatibility based on OS
-    dmethod <- getdownCompat() 
-    
     dir.create("edgar_MasterIndex")
     
     status.array <- data.frame()
@@ -132,7 +112,7 @@ getMasterIndex <- function(filing.year, useragent= "") {
             
             while(TRUE){
 
-              res <- DownloadSECFile(link, dfile, dmethod, UA)
+              res <- DownloadSECFile(link, dfile, UA)
 
               if (res){
                 

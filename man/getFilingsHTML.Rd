@@ -7,10 +7,10 @@
 getFilingsHTML(cik.no, form.type, filing.year, quarter, useragent)
 }
 \arguments{
-\item{cik.no}{vector of CIK number of firms in integer format. Suppress leading 
+\item{cik.no}{vector of CIK number of firms in integer format. Suppress leading
 zeroes from CIKs. Keep cik.no = 'ALL' if needs to download for all CIKs.}
 
-\item{form.type}{character vector containing form type to be downloaded. 
+\item{form.type}{character vector containing form type to be downloaded.
 form.type = 'ALL' if need to download all forms.}
 
 \item{filing.year}{vector of four digit numeric year}
@@ -21,7 +21,7 @@ as c(1 ,2, 3, 4).}
 \item{useragent}{Should be in the form of "YourName Contact@domain.com"}
 }
 \value{
-Function saves EDGAR filings in HTML format and returns filing information 
+Function saves EDGAR filings in HTML format and returns filing information
 in dataframe format.
 }
 \description{
@@ -29,24 +29,24 @@ in dataframe format.
 HTML format for view.
 }
 \details{
-getFilingsHTML function takes CIK(s), form type(s), filing year(s), and quarter of the 
-filing as input. The function imports edgar filings downloaded 
-via \link[edgar]{getFilings} function; otherwise, it downloads the filings which are 
+getFilingsHTML function takes CIK(s), form type(s), filing year(s), and quarter of the
+filing as input. The function imports edgar filings downloaded
+via \link[edgar]{getFilings} function; otherwise, it downloads the filings which are
 not already been downloaded. It then reads the downloaded filings, scraps filing text
-excluding exhibits, and saves the filing contents in 'edgar_FilingsHTML' 
-directory in HTML format. The new directory 'edgar_FilingsHTML' will be 
-automatically created by this function. 
-User must follow the US SEC's fair access policy, i.e. download only what you 
+excluding exhibits, and saves the filing contents in 'edgar_FilingsHTML'
+directory in HTML format. The new directory 'edgar_FilingsHTML' will be
+automatically created by this function.
+User must follow the US SEC's fair access policy, i.e. download only what you
 need and limit your request rates, see www.sec.gov/os/accessing-edgar-data.
 }
 \examples{
 \dontrun{
 
-output <- getFilingsHTML(cik.no = c(1000180, 38079), c('10-K','10-Q'), 
+output <- getFilingsHTML(cik.no = c(1000180, 38079), c('10-K','10-Q'),
                          2006, quarter = c(1, 2, 3), useragent)
 
-## download '10-Q' and '10-K' filings filed by the firm with 
-## CIK = 1000180 in quarters 1,2, and 3 of the year 2006. These filings 
+## download '10-Q' and '10-K' filings filed by the firm with
+## CIK = 1000180 in quarters 1,2, and 3 of the year 2006. These filings
 ## will be stored in the current working directory.
 
 }

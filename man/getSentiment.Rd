@@ -7,10 +7,10 @@
 getSentiment(cik.no, form.type, filing.year, useragent)
 }
 \arguments{
-\item{cik.no}{vector of CIK number of firms in integer format. Suppress leading 
+\item{cik.no}{vector of CIK number of firms in integer format. Suppress leading
 zeroes from CIKs. Keep cik.no = 'ALL' if needs to download for all CIKs.}
 
-\item{form.type}{character vector containing form type to be downloaded. 
+\item{form.type}{character vector containing form type to be downloaded.
 form.type = 'ALL' if need to download all forms.}
 
 \item{filing.year}{vector of four digit numeric year}
@@ -18,70 +18,70 @@ form.type = 'ALL' if need to download all forms.}
 \item{useragent}{Should be in the form of "YourName Contact@domain.com"}
 }
 \value{
-Function returns dataframe containing CIK number, company name, 
-date of filing, accession number, and various sentiment measures. 
-This function takes the help of Loughran-McDonald (L&M) sentiment 
-dictionaries (https://sraf.nd.edu/loughranmcdonald-master-dictionary/) to 
-compute sentiment measures of a EDGAR filing. Following are the 
+Function returns dataframe containing CIK number, company name,
+date of filing, accession number, and various sentiment measures.
+This function takes the help of Loughran-McDonald (L&M) sentiment
+dictionaries (https://sraf.nd.edu/loughranmcdonald-master-dictionary/) to
+compute sentiment measures of a EDGAR filing. Following are the
 definitions of the text characteristics and the sentiment measures:
 
-file.size = The filing size of a complete filing on the EDGAR server in 
+file.size = The filing size of a complete filing on the EDGAR server in
 kilobyte (KB).
 
-word.count = The total number of words in a filing text, excluding HTML 
+word.count = The total number of words in a filing text, excluding HTML
 tags and exhibits text.
 
-unique.word.count = The total number of unique words in a filing text, 
+unique.word.count = The total number of unique words in a filing text,
 excluding HTML tags and exhibits text.
 
-stopword.count = The total number of stop words in a filing text, 
+stopword.count = The total number of stop words in a filing text,
 excluding exhibits text.
 
-char.count = The total number of characters in a filing text, excluding 
+char.count = The total number of characters in a filing text, excluding
 HTML tags and exhibits text.
 
-complex.word.count = The total number of complex words in the filing text. 
-When vowels (a, e, i, o, u) occur more than three times in a word, then 
+complex.word.count = The total number of complex words in the filing text.
+When vowels (a, e, i, o, u) occur more than three times in a word, then
 that word is identified as a complex word.
 
-lm.dictionary.count = The number of words in the filing text that occur 
+lm.dictionary.count = The number of words in the filing text that occur
 in the Loughran-McDonald (LM) master dictionary.
 
-lm.negative.count = The number of LM financial-negative words in the 
+lm.negative.count = The number of LM financial-negative words in the
 document.
 
-lm.positive.count = The number of LM financial-positive words in the 
+lm.positive.count = The number of LM financial-positive words in the
 document.
 
-lm.strong.modal.count = The number of LM financial-strong modal words 
+lm.strong.modal.count = The number of LM financial-strong modal words
 in the document.
 
-lm.moderate.modal.count = The number of LM financial-moderate Modal 
+lm.moderate.modal.count = The number of LM financial-moderate Modal
 words in the document.
 
-lm.weak.modal.count = The number of LM financial-weak modal words in 
+lm.weak.modal.count = The number of LM financial-weak modal words in
 the document.
 
-lm.uncertainty.count = The number of LM financial-uncertainty words 
+lm.uncertainty.count = The number of LM financial-uncertainty words
 in the document.
 
-lm.litigious.count = The number of LM financial-litigious words in 
+lm.litigious.count = The number of LM financial-litigious words in
 the document.
 
-hv.negative.count = The number of words in the document that occur in 
+hv.negative.count = The number of words in the document that occur in
 the 'Harvard General Inquirer' Negative word list, as defined by LM.
 }
 \description{
 \code{getSentiment} computes sentiment measures of EDGAR filings
 }
 \details{
-getSentiment function takes CIK(s), form type(s), and year(s) as input parameters.  
-The function first imports available downloaded filings in the local working directory 
-'edgar_Filings' created by \link[edgar]{getFilings} function; otherwise, 
+getSentiment function takes CIK(s), form type(s), and year(s) as input parameters.
+The function first imports available downloaded filings in the local working directory
+'edgar_Filings' created by \link[edgar]{getFilings} function; otherwise,
 it automatically downloads the filings which are not already been downloaded.
-It then reads, cleans, and computes sentiment measures for these filings. 
+It then reads, cleans, and computes sentiment measures for these filings.
 The function returns a dataframe with filing information and sentiment measures.
-User must follow the US SEC's fair access policy, i.e. download only what you 
+User must follow the US SEC's fair access policy, i.e. download only what you
 need and limit your request rates, see www.sec.gov/os/accessing-edgar-data.
 }
 \examples{
@@ -93,13 +93,13 @@ plan(multisession, workers = availableCores()-1)
 library(progressr)
 handlers(global = TRUE)
 
-senti.df <- getSentiment(cik.no = c('1000180', '38079'), 
-                         form.type = '10-K', filing.year = 2006, useragent) 
-                         
-## Returns dataframe with sentiment measures of firms with CIKs 
+senti.df <- getSentiment(cik.no = c('1000180', '38079'),
+                         form.type = '10-K', filing.year = 2006, useragent)
+
+## Returns dataframe with sentiment measures of firms with CIKs
 ## 1000180 and 38079 filed in year 2006 for form type '10-K'.
 
-senti.df <- getSentiment(cik.no = '38079', form.type = c('10-K', '10-Q'), 
+senti.df <- getSentiment(cik.no = '38079', form.type = c('10-K', '10-Q'),
                          filing.year = c(2005, 2006), useragent)
 }
 }

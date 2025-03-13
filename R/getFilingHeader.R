@@ -88,35 +88,20 @@ getFilingHeader <-
            ),
            nmax = 500,
            ...) {
+    options(warn = -1)
+    
     ### Check for valid user agent
-    if (useragent != "") {
-      # Check user agent
-      bb <-
-        any(
-          grepl(
-            "lonare.gunratan@gmail.com|glonare@uncc.edu|bharatspatil@gmail.com",
-            useragent,
-            ignore.case = T
-          )
-        )
-      
-      if (bb == TRUE) {
-        cat(
-          "Please provide a valid User Agent.
-      Visit https://www.sec.gov/os/accessing-edgar-data
-      for more information"
-        )
-        return()
-      }
-      
-    } else{
-      cat(
-        "Please provide a valid User Agent.
-      Visit https://www.sec.gov/os/accessing-edgar-data
-      for more information"
+    if (is.null(useragent)) {
+      stop(
+        "You must provide a valid 'useragent' in the form of 'Your Name Contact@domain.com'.
+       Visit https://www.sec.gov/os/accessing-edgar-data for more information"
       )
-      return()
     }
+    if (!is.numeric(filing.year)) {
+      stop("Input year(s) is not numeric.")
+    }
+    
+    UA <- paste0("Mozilla/5.0 (", useragent, ")")
     
     output <- getFilings(
       cik.no,
@@ -132,7 +117,7 @@ getFilingHeader <-
       return()
     }
     
-    cat("Scraping filing header information ...\n")
+    cat("Scraping filing header information")
     
     output$quarter <- NULL
     output$filing.year <- NULL
@@ -144,11 +129,9 @@ getFilingHeader <-
     results <- future.apply::future_lapply(
       X = 1:nrow(output),
       FUN = function(i) {
-      f.type <- gsub("/", "", output$form.type[i])
-      
+
       dest.filename <-
-        paste0(getwd(),"/",
-               "Edgar filings_full text/Form ",
+        paste0("edgar_Filings/Form ",
                gsub("/", "", output$form.type[i]),
                "/",
                output$cik[i],

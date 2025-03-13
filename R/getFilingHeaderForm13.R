@@ -74,34 +74,20 @@ getFilingHeaderForm13 <-
            useragent = "",
            ...) {
     ### Check for valid user agent
-    if (useragent != "") {
-      # Check user agent
-      bb <-
-        any(
-          grepl(
-            "lonare.gunratan@gmail.com|glonare@uncc.edu|bharatspatil@gmail.com",
-            useragent,
-            ignore.case = T
-          )
-        )
-      
-      if (bb == TRUE) {
-        cat(
-          "Please provide a valid User Agent.
-      Visit https://www.sec.gov/os/accessing-edgar-data
-      for more information"
-        )
-        return()
-      }
-      
-    } else{
-      cat(
-        "Please provide a valid User Agent.
-      Visit https://www.sec.gov/os/accessing-edgar-data
-      for more information"
+    options(warn = -1)
+    
+    ### Check for valid user agent
+    if (is.null(useragent)) {
+      stop(
+        "You must provide a valid 'useragent' in the form of 'Your Name Contact@domain.com'.
+       Visit https://www.sec.gov/os/accessing-edgar-data for more information"
       )
-      return()
     }
+    if (!is.numeric(filing.year)) {
+      stop("Input year(s) is not numeric.")
+    }
+    
+    UA <- paste0("Mozilla/5.0 (", useragent, ")")
     
     output <- getFilings(
       cik.no,
@@ -117,7 +103,7 @@ getFilingHeaderForm13 <-
       return()
     }
     
-    cat("Scraping filing header information ...\n")
+    cat("Scraping filing header information")
     
     output$quarter <- NULL
     output$filing.year <- NULL
@@ -133,8 +119,7 @@ getFilingHeaderForm13 <-
       FUN = function(i) {
 
       dest.filename <-
-        paste0(getwd(),"/",
-          "Edgar filings_full text/Form ",
+        paste0("edgar_Filings/Form ",
           gsub("/", "", output$form.type[i]),
           "/",
           output$cik[i],
@@ -158,15 +143,15 @@ getFilingHeaderForm13 <-
       main.df <- output[i, ]
       
       #Get event date and cusip
-      if (any(grepl(pattern = '<htm>|<html>|<html\\s', filing.text, ignore.case =
-                    T))) {
-        line <- grep("<HTML>|<html\\s", filing.text, ignore.case = T)
-        line_end <- grep("</HTML>", filing.text, ignore.case = T)
+      if (any(grepl(pattern = '<html|<!DOCTYPE html|<xml|<type>xml|10k.htm|<XBRL', 
+                    filing.text, ignore.case = TRUE))) {
         
-        if(length(line_end) == 0){
-          line <- grep("<text>|<text\\s", filing.text, ignore.case = T)
-          line_end <- grep("</text>", filing.text, ignore.case = T)
-        }
+        line_start <- grep("<html|<!DOCTYPE html|<xml|<type>xml|<10k.htm|<XBRL", filing.text, ignore.case = TRUE)[1]
+        line_end <- grep("</html>|</!DOCTYPE html>|</xml>|</type>xml|</10k.htm>|</XBRL>", filing.text, ignore.case = TRUE)[1]
+        
+        if (length(line_end) == 0) {
+          line_end <- length(filing.text)
+          }
         
         filing.html <- filing.text[line:line_end]
         
@@ -184,40 +169,27 @@ getFilingHeaderForm13 <-
             XML::xmlValue
           )
         
-        filing.html <-
-          iconv(filing.html, "latin1", "ASCII", sub = " ")
+        event.period <- GetFilingEventDate(filing.html)
+        cusip.no <- GetFilingCusip(filing.html)
         
-        filing.html <- gsub("\\t|\\n|\\s", " ", filing.html)
-        #filing.html <- gsub("\\s{2,}", " ", filing.html)
-        #filing.html <- gsub("^\\s{1,}", "", filing.html)
-        # Check for empty lines and delete
-        empty.lnumbers <- grep("^\\s*$", filing.html)
+      } else if (any(grepl(pattern = '<text|<document', filing.text, ignore.case = TRUE))) {
         
-        if (length(empty.lnumbers) > 0) {
-          filing.html <-
-            filing.html[-empty.lnumbers]  ## Remove all lines only with space
+        if(length(line_end) == 0){
+          line <- grep("<text|<document", filing.text, ignore.case = T)[1]
+          line_end <- grep("</text>|</document>", filing.text, ignore.case = T)[1]
+        }
+        if (length(line_end) == 0) {
+          line_end <- length(filing.text)
         }
         
-        event.period <- GetFilingEventDate(filing.html)
+        filing.text <- filing.text[line_start:line_end]
         
-        cusip.no <- GetFilingCusip(filing.html)
+        event.period <- GetFilingEventDate(filing.text)
+        cusip.no <- GetFilingCusip(filing.text)
+        
       } else {
         
-        filing.text <-
-          iconv(filing.text, "latin1", "ASCII", sub = " ")
-        
-        filing.text <- gsub("\\t|\\n|\\s", " ", filing.text)
-        #filing.text <- gsub("\\s{2,}", " ", filing.text)
-        #filing.text <- gsub("^\\s{1,}", "", filing.text)
-        # Check for empty lines and delete
-        empty.lnumbers <- grep("^\\s*$", filing.text)
-        
-        if (length(empty.lnumbers) > 0) {
-          filing.text <-
-            filing.text[-empty.lnumbers]  ## Remove all lines only with space
-        }
         event.period <- GetFilingEventDate(filing.text)
-        
         cusip.no <- GetFilingCusip(filing.text)
       }
       
@@ -444,7 +416,7 @@ GetFilingEventDate <- function(filing.text) {
     event.period <- stringr::str_squish(event.period)
   }
   
-  # come cleaning of the extracted text
+  # some cleaning of the extracted text
   event.period <- gsub("\\[|\\]", "", event.period)
   event.period <- stringr::str_squish(event.period)
   
@@ -724,3 +696,5 @@ GetFilingCusip <- function(filing.text) {
   return(cusip.no)
 }
 globalVariables("cusip.no")
+globalVariables("state.abb")
+globalVariables("state.name")

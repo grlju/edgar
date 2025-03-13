@@ -16,14 +16,14 @@ form.type = 'ALL' if need to download all forms.}
 \item{filing.year}{vector of four digit numeric year}
 
 \item{quarter}{vector of one digit quarter integer number. By deault, it is kept
-as c(1 ,2, 3, 4).}
+as c(1, 2, 3, 4).}
 
 \item{downl.permit}{"y" or "n". The default value of downl.permit is "n". It
 asks a user permission to download fillings. This permission helps the user
 to decide in case if number of filings are large. Setting downl.permit = "y"
 will not ask for user permission to download filings.}
 
-\item{useragent}{Should be in the form of "YourName Contact@domain.com"}
+\item{useragent}{Should be in the form of "Your Name Contact@domain.com"}
 }
 \value{
 Function downloads EDGAR filings and returns download status in dataframe
@@ -40,8 +40,8 @@ filing as input. It creates new directory "Edgar filings_full text" to
 store all downloaded filings. All the filings will be stored in the
 current working directory. Keep the same current working directory for
 further process. According to SEC EDGAR's guidelines a user also needs to
-declare user agent. The progress bar can be controlled with the 
-\link[progressr]{progressr} package. See in particular 
+declare user agent. The progress bar can be controlled with the
+\link[progressr]{progressr} package. See in particular
 \link[progressr:handlers]{handlers}
 }
 \examples{

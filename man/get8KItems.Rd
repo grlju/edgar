@@ -7,7 +7,7 @@
 get8KItems(cik.no, filing.year, useragent)
 }
 \arguments{
-\item{cik.no}{vector of CIK(s) in integer format. Suppress leading 
+\item{cik.no}{vector of CIK(s) in integer format. Suppress leading
 zeroes from CIKs.}
 
 \item{filing.year}{vector of four digit numeric year}
@@ -23,16 +23,16 @@ Function returns dataframe with Form 8-K events information along with CIK
 and filing year.
 }
 \details{
-get8KItems function takes firm CIK(s) and filing year(s) as input parameters from 
-a user and provides information on the Form 8-K triggering events along with the firm 
-filing information. The function searches and imports existing downloaded 
-8-K filings in the current directory; otherwise it downloads them using 
-\link[edgar:getFilings]{getFilings} function. It then reads the 8-K filings and parses them 
-to extract events information. According to SEC EDGAR's guidelines a user also needs to 
-declare user agent. The function uses the \link[future.apply:future_lapply]{future_lapply} 
-function to extract information in parallel. Please set \link[future:plan]{plan} 
+get8KItems function takes firm CIK(s) and filing year(s) as input parameters from
+a user and provides information on the Form 8-K triggering events along with the firm
+filing information. The function searches and imports existing downloaded
+8-K filings in the current directory; otherwise it downloads them using
+\link[edgar:getFilings]{getFilings} function. It then reads the 8-K filings and parses them
+to extract events information. According to SEC EDGAR's guidelines a user also needs to
+declare user agent. The function uses the \link[future.apply:future_lapply]{future_lapply}
+function to extract information in parallel. Please set \link[future:plan]{plan}
 according to your needs before running the function. The progress bar
-can be controlled with the \link[progressr]{progressr} package. See in particular 
+can be controlled with the \link[progressr]{progressr} package. See in particular
 \link[progressr:handlers]{handlers}
 }
 \examples{
@@ -47,7 +47,7 @@ handlers(global = TRUE)
 output <- get8KItems(cik.no = 38079, filing.year = 2005, useragent)
 ## Returns 8-K event information for CIK '38079' filed in year 2005.
 
-output <- get8KItems(cik.no = c(1000180,38079), 
-                     filing.year = c(2005, 2006), useragent) 
+output <- get8KItems(cik.no = c(1000180,38079),
+                     filing.year = c(2005, 2006), useragent)
 }
 }
