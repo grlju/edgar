@@ -174,6 +174,7 @@ getFilings <-
       index.df$status <- NA
       
       p <- progressr::progressor(along = 1:total.files)
+      cat("Downloading fillings\n")
       
       for (i in 1:total.files) {
         edgar.link <- paste0("https://www.sec.gov/Archives/", index.df$edgar.link[i])
@@ -210,7 +211,6 @@ getFilings <-
         } else {
           ### Go inside a loop to download
           k = 1
-          cat("Downloading fillings\n")
           
           while (TRUE) {
             res <- DownloadSECFile(edgar.link, dest.filename, UA)
