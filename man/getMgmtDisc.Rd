@@ -7,7 +7,7 @@
 getMgmtDisc(cik.no, filing.year, useragent)
 }
 \arguments{
-\item{cik.no}{vector of firm CIK numbers in integer format. Suppress leading 
+\item{cik.no}{vector of firm CIK numbers in integer format. Suppress leading
 zeroes from CIKs.}
 
 \item{filing.year}{vector of four digit numeric year}
@@ -15,27 +15,27 @@ zeroes from CIKs.}
 \item{useragent}{Should be in the form of "YourName Contact@domain.com"}
 }
 \value{
-Function saves scrapped "Item 7" section from annual filings in 
-"MD&A section text" directory present in the working directory. 
-The output dataframe contains information on CIK number, company name, 
-date of filing, and accession number. For a successful extraction of M&A section, 
+Function saves scrapped "Item 7" section from annual filings in
+"MD&A section text" directory present in the working directory.
+The output dataframe contains information on CIK number, company name,
+date of filing, and accession number. For a successful extraction of M&A section,
 'extract.status' column returns 1, other return 0 for failed extraction.
 }
 \description{
-\code{getMgmtDisc} retrieves "Item 7. Management's Discussion and Analysis of 
-Financial Condition and Results of Operations" section of firms from annual statements 
+\code{getMgmtDisc} retrieves "Item 7. Management's Discussion and Analysis of
+Financial Condition and Results of Operations" section of firms from annual statements
 based on CIK number and filing year.
 }
 \details{
-getMgmtDisc function takes firm CIK(s) and filing year(s) as input parameters from 
+getMgmtDisc function takes firm CIK(s) and filing year(s) as input parameters from
 a user and provides "Item 7" section extracted from annual statements along with
-filing information. The function imports annual filings downloaded 
-via \link[edgar]{getFilings} function; otherwise, it downloads the filings which are 
-not already been downloaded. It then reads, cleans, and parse the required section 
-from the filings. It creates a new directory with the name "edgar_MgmtDisc" 
-in the current working directory to save scrapped "Item 7" sections in text format. 
-It considers "10-K", "10-K405", "10KSB", and "10KSB40" form types as annual statements. 
-User must follow the US SEC's fair access policy, i.e. download only what you 
+filing information. The function imports annual filings downloaded
+via \link[edgar]{getFilings} function; otherwise, it downloads the filings which are
+not already been downloaded. It then reads, cleans, and parse the required section
+from the filings. It creates a new directory with the name "edgar_MgmtDisc"
+in the current working directory to save scrapped "Item 7" sections in text format.
+It considers "10-K", "10-K405", "10KSB", and "10KSB40" form types as annual statements.
+User must follow the US SEC's fair access policy, i.e. download only what you
 need and limit your request rates, see www.sec.gov/os/accessing-edgar-data.
 }
 \examples{
@@ -43,11 +43,11 @@ need and limit your request rates, see www.sec.gov/os/accessing-edgar-data.
 
 output <- getMgmtDisc(cik.no = c(1000180, 38079), filing.year = 2005, useragent)
 
-## saves scrapped "Item 7" section from 10-K filings for CIKs in 
-## "MD&A section text" directory present in the working directory. 
+## saves scrapped "Item 7" section from 10-K filings for CIKs in
+## "MD&A section text" directory present in the working directory.
 ## Also, it provides filing information in the output datframe.
 
-output <- getMgmtDisc(cik.no = c(1000180, 38079), 
+output <- getMgmtDisc(cik.no = c(1000180, 38079),
                       filing.year = c(2005, 2006), useragent)
 }
 }

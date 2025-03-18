@@ -53,7 +53,7 @@
 #'                      2006, quarter = c(1, 2, 3), downl.permit = "y", useragent)
 #'}
 #' @export
-#' @import utils httr
+#' @import httr2
 #' @importFrom R.utils gunzip
 #' @importFrom progressr progressor handlers
 
@@ -81,17 +81,20 @@ getFilings <-
     UA <- paste0("Mozilla/5.0 (", useragent, ")")
     
     # function to download file and return FALSE if download error
+    # Throttle to 10 request every 1 seconds, current rate limit is 10 requests per 1 second
+    # https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data
+    # Retry 20 times on transient errors
     DownloadSECFile <- function(link, dfile, UA) {
       tryCatch({
-        r <- httr::GET(
-          link,
-          httr::add_headers(Connection = "keep-alive", `User-Agent` = UA),
-          httr::write_disk(dfile, overwrite = TRUE)
-        )
-        if (httr::status_code(r) == 200) {
+        req <- request(link) |>
+          req_headers(`User-Agent` = UA, Connection = "keep-alive") |>
+          req_throttle(capacity = 10, fill_time_s = 1) |>  
+          req_retry(max_tries = 20, retry_on_failure = TRUE, is_transient = \(resp) resp_status(resp) %in% c(429, 500, 503)) |>
+          req_perform(path = dfile) 
+          
+        if (resp_status(req) == 200) {
           return(TRUE)
-        }
-        else {
+        } else {
           return(FALSE)
         }
       }, error = function(e) {
@@ -209,45 +212,17 @@ getFilings <-
           index.df$status[i] <- "Download success"
           
         } else {
-          ### Go inside a loop to download
-          k = 1
           
-          while (TRUE) {
+          ### Go inside a loop to download
             res <- DownloadSECFile(edgar.link, dest.filename, UA)
             
             if (res) {
-              if (file.info(dest.filename)$size < 6000) {
-                aa <- readLines(dest.filename)
-                
-                if (any(
-                  grepl(
-                    "For security purposes, and to ensure that the public service remains available to users, this government computer system",
-                    aa
-                  )
-                ) == FALSE) {
-                  index.df$status[i] <- "Download success"
-                  Sys.sleep(3)
-                  break
-                }
-                
-              } else{
-                index.df$status[i] <- "Download success"
-                Sys.sleep(1)
-                break
-              }
-              k = k + 1
-              Sys.sleep(6)
-            }
-            
-            ### If waiting for more than 10*15 seconds, put as server error
-            if (k == 16) {
+              index.df$status[i] <- "Download success"
+            } else {
               index.df$status[i] <- "Download Error"
-              break
             }
-            
-            k = k + 1
-            Sys.sleep(3) ## Wait for multiple of 3 seconds to ease request load on SEC server.
-          }
+          
+          ### Update progress bar  
           p()
         }
       }

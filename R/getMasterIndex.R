@@ -38,10 +38,10 @@
 #' ## stores into 2006master.Rda and 2008master.Rda files.
 #'}
 #' @export
+#' @import httr2
 #' @importFrom R.utils gunzip
-#' @importFrom utils download.file
 
-getMasterIndex <- function(filing.year, useragent= "") {
+getMasterIndex <- function(filing.year, useragent = NULL) {
   
   options(warn = -1)
   
@@ -59,21 +59,22 @@ getMasterIndex <- function(filing.year, useragent= "") {
   UA <- paste0("Mozilla/5.0 (", useragent, ")")
   
   # function to download file and return FALSE if download error
+  # Throttle to 10 request every 1 seconds, current rate limit is 10 requests per 1 second
+  # https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data
+  # Retry 20 times on transient errors
   DownloadSECFile <- function(link, dfile, UA) {
-    
     tryCatch({
-      r <- httr::GET(link, 
-                httr::add_headers(`Connection` = "keep-alive", `User-Agent` = UA),
-                httr::write_disk(dfile, overwrite=TRUE)
-              )
+      req <- request(link) |>
+        req_headers(`User-Agent` = UA, Connection = "keep-alive") |>
+        req_throttle(capacity = 10, fill_time_s = 1) |>  
+        req_retry(max_tries = 20, retry_on_failure = TRUE, is_transient = \(resp) resp_status(resp) %in% c(429, 500, 503)) |>
+        req_perform(path = dfile) 
       
-      if(httr::status_code(r)==200){
+      if (resp_status(req) == 200) {
         return(TRUE)
-      }else{
+      } else {
         return(FALSE)
       }
-     
-
     }, error = function(e) {
       return(FALSE)
     })
@@ -96,58 +97,24 @@ getMasterIndex <- function(filing.year, useragent= "") {
             quarterloop <- ceiling(as.integer(format(Sys.Date(), "%m"))/3)
         }
         
-        cat("Downloading Master Indexes from SEC server for",year,"...\n")
-
+        cat("Downloading Master Indexes from SEC server for",year,"\n")
+        
         for (quarter in 1:quarterloop) {
-            
-            # save downloaded file as specific name
-            dfile <- paste0("edgar_MasterIndex/", year, "QTR", quarter, "master.gz")
-            file <- paste0("edgar_MasterIndex/", year, "QTR", quarter, "master")
-            
-            # form a link to download master file
-            link <- paste0("https://www.sec.gov/Archives/edgar/full-index/", year, "/QTR", quarter, "/master.gz")
-            
-            ### Go inside a loop to download
-            count = 1
-            
-            while(TRUE){
-
-              res <- DownloadSECFile(link, dfile, UA)
-
-              if (res){
-                
-                if (file.info(dfile)$size < 6000){
-                  
-                  aa <- readLines(dfile)
-                  
-                  if(any(grepl("For security purposes, and to ensure that the public service remains available to users, this government computer system", aa)) == FALSE){
-                  
-                      break
-                  }
-                  
-                }else{
-                  Sys.sleep(1)
-                  break
-                }
-              }
-              
-              ### If waiting for more than 10*15 seconds, put as server error
-              if(count == 16){
-                
-                status.array <- rbind(status.array, data.frame(Filename = paste0(year, ": quarter-", quarter),
-                                                               status = "Server Error"))
-                break
-              }
-              
-              count = count + 1 
-              Sys.sleep(3) ## Wait for multiple of 3 seconds to ease request load on SEC server. 
-            }
-            
-            
+          # Save downloaded file as specific name
+          dfile <- paste0("edgar_MasterIndex/", year, "QTR", quarter, "master.gz")
+          file <- paste0("edgar_MasterIndex/", year, "QTR", quarter, "master")
+          
+          # Form a link to download master file
+          link <- paste0("https://www.sec.gov/Archives/edgar/full-index/", year, "/QTR", quarter, "/master.gz")
+          
+          ### Download the file
+          res <- DownloadSECFile(link, dfile, UA)
+          
+          if (res) {
             # Unzip gz file
             R.utils::gunzip(dfile, destname = file, temporary = FALSE, skip = FALSE, overwrite = TRUE, remove = FALSE)
             
-            # Removing ''' so that scan with '|' not fail due to occurrence of ''' in company name
+            # Removing ''' so that scan with '|' does not fail due to occurrence of ''' in company name
             raw.data <- readLines(file)
             raw.data <- iconv(raw.data, "latin1", "ASCII", sub = "")
             raw.data <- gsub("'", "", raw.data)
@@ -155,33 +122,50 @@ getMasterIndex <- function(filing.year, useragent= "") {
             # Find line number where header description ends
             header.end <- grep("--------------------------------------------------------", raw.data)
             
-            # writing back to storage
+            # Write back to storage
             writeLines(raw.data, file)
             
-            scraped.data <- scan(file, what = list("", "", "", "", ""), flush = F, skip = header.end, sep = "|",
-                                 quiet = T)
+            # Read the file into a data frame
+            scraped.data <- scan(file, what = list("", "", "", "", ""), flush = FALSE, skip = header.end, sep = "|", quiet = TRUE)
             
             # Remove punctuation characters from company names
-            company.name <- gsub("[[:punct:]]", " ", scraped.data[[2]], perl = T)
+            company.name <- gsub("[[:punct:]]", " ", scraped.data[[2]], perl = TRUE)
             
-            final.data <- data.frame(cik = scraped.data[[1]], company.name = company.name, form.type = scraped.data[[3]],
-                                     date.filed = scraped.data[[4]], edgar.link = scraped.data[[5]], quarter = quarter)
+            # Create final data frame
+            final.data <- data.frame(
+              cik = scraped.data[[1]],
+              company.name = company.name,
+              form.type = scraped.data[[3]],
+              date.filed = scraped.data[[4]],
+              edgar.link = scraped.data[[5]],
+              quarter = quarter
+            )
             
+            # Append to year.master
             year.master <- rbind(year.master, final.data)
             
+            # Remove the unzipped file
             file.remove(file)
             
-            status.array <- rbind(status.array, data.frame(Filename = paste0(year, ": quarter-", quarter),
-                                                           status = "Download success"))
+            # Update status array
+            status.array <- rbind(status.array, data.frame(
+              Filename = paste0(year, ": quarter-", quarter),
+              status = "Download success"
+            ))
             
-            cat("Master Index for quarter", quarter,"\n")
+            cat("Master Index for quarter", quarter, "downloaded successfully\n")
+          } else {
+            # Update status array for server error
+            status.array <- rbind(status.array, data.frame(
+              Filename = paste0(year, ": quarter-", quarter),
+              status = "Server Error"
+            ))
+            
+            cat("Master Index for quarter", quarter, "failed to download\n")
+          }
         }
         
-  
         assign(paste0(year, "master"), year.master)
-        
         save(year.master, file = paste0("edgar_MasterIndex/", year, "master.Rda"))
-      
-    }
-    
+      }
 }

@@ -12,7 +12,7 @@ zeroes from a CIK number. cik.no = 'ALL' conisders all the CIKs.}
 
 \item{filing.year}{vector of four digit numeric year}
 
-\item{useragent}{Should be in the form of "YourName Contact@domain.com"}
+\item{useragent}{Should be in the form of "Your Name Contact@domain.com"}
 }
 \value{
 Function saves scrapped business description section from annual 

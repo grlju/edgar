@@ -28,7 +28,7 @@
 #'
 #' @param word.list vector of words to search in the filing
 #'
-#' @param useragent Should be in the form of "YourName Contact@domain.com"
+#' @param useragent Should be in the form of "Your Name Contact@domain.com"
 #'
 #' @return Function returns dataframe containing filing information and the
 #' number of word hits based on the input phrases. Additionally, this
@@ -51,7 +51,7 @@ searchFilings <- function(cik.no,
                           form.type,
                           filing.year,
                           word.list,
-                          useragent = "") {
+                          useragent = NULL) {
   options(warn = -1)
   
   ### Check for valid user agent
@@ -88,15 +88,13 @@ searchFilings <- function(cik.no,
   
   ### Search for word list
   count_func <- function(word, text) {
-    #stringr::str_count(text, word)
-    occur <- unlist(gregexpr(word, f.text, ignore.case = T))
+    occur <- unlist(gregexpr(word, text, ignore.case = T))
     
     if (occur[1] != -1) {
       return(length(occur))
     } else {
       return(0)
     }
-    
   }
   
   extract_text <- function (text, word.list) {
@@ -192,7 +190,6 @@ searchFilings <- function(cik.no,
       }
       
       
-      
       # Preprocessing the filing text
       #f.text <- gsub("'s ", "", f.text)
       f.text <- gsub("\\n|\\t|,", " ", f.text)
@@ -284,15 +281,11 @@ searchFilings <- function(cik.no,
       }
       
       p()
-      
+      return(output[i,])
     }
   )
-  
-  output$status <- NULL
-  output$quarter <- NULL
-  output$filing.year <- NULL
-  output$accession.number <- NULL
-  
+  output <- do.call(rbind, results)
+
   ## convert dates into R dates
   output$date.filed <- as.Date(as.character(output$date.filed), "%Y-%m-%d")
   
@@ -300,4 +293,3 @@ searchFilings <- function(cik.no,
   
   return(output)
 }
-globalVariables("f.text")

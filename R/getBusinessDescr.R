@@ -22,7 +22,7 @@
 #' 
 #' @param filing.year vector of four digit numeric year
 #' 
-#' @param useragent Should be in the form of "YourName Contact@domain.com"
+#' @param useragent Should be in the form of "Your Name Contact@domain.com"
 #' 
 #' @return Function saves scrapped business description section from annual 
 #' filings in "Business descriptions text" directory created in the current 
@@ -45,37 +45,22 @@
 #' @export
 #' @import utils XML
 
-getBusinDescr <- function(cik.no, filing.year, useragent="") {
+getBusinDescr <- function(cik.no, filing.year, useragent= NULL) {
   
   f.type <- c("10-K", "10-K405","10KSB", "10-KSB", "10KSB40")
   
   ### Check for valid user agent
-  if(useragent != ""){
-    # Check user agent
-    bb <- any(grepl( "lonare.gunratan@gmail.com|bharatspatil@gmail.com",
-                     useragent, ignore.case = T))
-    
-    if(bb == TRUE){
-      
-      cat("Please provide a valid User Agent. 
-      Visit https://www.sec.gov/os/accessing-edgar-data 
-      for more information")
-      return()
-    }
-    
-  }else{
-    
-    cat("Please provide a valid User Agent. 
-      Visit https://www.sec.gov/os/accessing-edgar-data 
-      for more information")
-    return()
+  options(warn = -1)
+  
+  ### Check for valid user agent
+  if (is.null(useragent)) {
+    stop(
+      "You must provide a valid 'useragent' in the form of 'Your Name Contact@domain.com'.
+       Visit https://www.sec.gov/os/accessing-edgar-data for more information"
+    )
   }
-  
-  
-  # Check the year validity
   if (!is.numeric(filing.year)) {
-    cat("Please check the input year.")
-    return()
+    stop("Input year(s) is not numeric.")
   }
   
   output <- getFilings(cik.no = cik.no, form.type = f.type , filing.year, 
@@ -86,9 +71,7 @@ getBusinDescr <- function(cik.no, filing.year, useragent="") {
     return()
   }
   
-  cat("Extracting 'Item 1' section...\n")
-  
-  progress.bar <- txtProgressBar(min = 0, max = nrow(output), style = 3)
+  cat("Extracting 'Item 1' section\n")
   
   # Function for text cleaning
   CleanFiling2 <- function(text) {
@@ -111,6 +94,8 @@ getBusinDescr <- function(cik.no, filing.year, useragent="") {
   
   output$company.name <- toupper(as.character(output$company.name))
   output$company.name <- gsub("\\s{2,}", " ",output$company.name)
+  
+  p <- progressr::progressor(along = 1:nrow(output))
   
   for (i in 1:nrow(output)) {
     
@@ -188,7 +173,6 @@ getBusinDescr <- function(cik.no, filing.year, useragent="") {
       f.text <- f.text[-empty.lnumbers]  ## Remove all lines only with space
     }
     
-    
     # Cobine lines with ITEM only in one line and attach 1. Business from another line
     item.lnumbers <- grep("^ITEM\\s{0,}\\d{0,}\\s{0,}$|^ITEM\\s{0,}1 and 2\\s{0,}$", f.text, ignore.case = T)
     
@@ -256,18 +240,11 @@ getBusinDescr <- function(cik.no, filing.year, useragent="") {
     
     
     # update progress bar
-    setTxtProgressBar(progress.bar, i)
+    p()
   }
   
   ## convert dates into R dates
   output$date.filed <- as.Date(as.character(output$date.filed), "%Y-%m-%d")
-  
-  # Close progress bar
-  close(progress.bar)
-  
-  output$quarter <- NULL
-  output$filing.year <- NULL
-  names(output)[names(output) == 'status'] <- 'downld.status'
   
   cat("Business descriptions are stored in 'edgar_BusinDescr' directory.")
   

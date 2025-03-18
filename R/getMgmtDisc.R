@@ -1,201 +1,249 @@
 #' Retrieves management's discussion and analysis section
 #'
-#' \code{getMgmtDisc} retrieves "Item 7. Management's Discussion and Analysis of 
-#' Financial Condition and Results of Operations" section of firms from annual statements 
+#' \code{getMgmtDisc} retrieves "Item 7. Management's Discussion and Analysis of
+#' Financial Condition and Results of Operations" section of firms from annual statements
 #' based on CIK number and filing year.
 #'
-#' getMgmtDisc function takes firm CIK(s) and filing year(s) as input parameters from 
+#' getMgmtDisc function takes firm CIK(s) and filing year(s) as input parameters from
 #' a user and provides "Item 7" section extracted from annual statements along with
-#' filing information. The function imports annual filings downloaded 
-#' via \link[edgar]{getFilings} function; otherwise, it downloads the filings which are 
-#' not already been downloaded. It then reads, cleans, and parse the required section 
-#' from the filings. It creates a new directory with the name "edgar_MgmtDisc" 
-#' in the current working directory to save scrapped "Item 7" sections in text format. 
-#' It considers "10-K", "10-K405", "10KSB", and "10KSB40" form types as annual statements. 
-#' User must follow the US SEC's fair access policy, i.e. download only what you 
+#' filing information. The function imports annual filings downloaded
+#' via \link[edgar]{getFilings} function; otherwise, it downloads the filings which are
+#' not already been downloaded. It then reads, cleans, and parse the required section
+#' from the filings. It creates a new directory with the name "edgar_MgmtDisc"
+#' in the current working directory to save scrapped "Item 7" sections in text format.
+#' It considers "10-K", "10-K405", "10KSB", and "10KSB40" form types as annual statements.
+#' User must follow the US SEC's fair access policy, i.e. download only what you
 #' need and limit your request rates, see www.sec.gov/os/accessing-edgar-data.
-#'   
+#'
 #' @usage getMgmtDisc(cik.no, filing.year, useragent)
-#' 
-#' @param cik.no vector of firm CIK numbers in integer format. Suppress leading 
+#'
+#' @param cik.no vector of firm CIK numbers in integer format. Suppress leading
 #' zeroes from CIKs.
-#' 
+#'
 #' @param filing.year vector of four digit numeric year
-#' 
+#'
 #' @param useragent Should be in the form of "YourName Contact@domain.com"
-#' 
-#' @return Function saves scrapped "Item 7" section from annual filings in 
-#' "MD&A section text" directory present in the working directory. 
-#' The output dataframe contains information on CIK number, company name, 
-#' date of filing, and accession number. For a successful extraction of M&A section, 
-#' 'extract.status' column returns 1, other return 0 for failed extraction. 
-#'   
+#'
+#' @return Function saves scrapped "Item 7" section from annual filings in
+#' "MD&A section text" directory present in the working directory.
+#' The output dataframe contains information on CIK number, company name,
+#' date of filing, and accession number. For a successful extraction of M&A section,
+#' 'extract.status' column returns 1, other return 0 for failed extraction.
+#'
 #' @examples
 #' \dontrun{
-#' 
+#'
 #' output <- getMgmtDisc(cik.no = c(1000180, 38079), filing.year = 2005, useragent)
-#' 
-#' ## saves scrapped "Item 7" section from 10-K filings for CIKs in 
-#' ## "MD&A section text" directory present in the working directory. 
+#'
+#' ## saves scrapped "Item 7" section from 10-K filings for CIKs in
+#' ## "MD&A section text" directory present in the working directory.
 #' ## Also, it provides filing information in the output datframe.
-#' 
-#' output <- getMgmtDisc(cik.no = c(1000180, 38079), 
+#'
+#' output <- getMgmtDisc(cik.no = c(1000180, 38079),
 #'                       filing.year = c(2005, 2006), useragent)
 #'}
 #' @export
 #' @import XML utils
 
-getMgmtDisc <- function(cik.no, filing.year, useragent="" ) {
+getMgmtDisc <- function(cik.no, filing.year, useragent = NULL) {
+  f.type <- c("10-K", "10-K405", "10KSB", "10-KSB", "10KSB40")
+  # 10-K, 10-K405, 10-KSB, 10-KT, 10KSB, 10KSB40, and 10KT405 filings in the EDGAR database
   
-    f.type <- c("10-K", "10-K405","10KSB", "10-KSB", "10KSB40")
-    # 10-K, 10-K405, 10-KSB, 10-KT, 10KSB, 10KSB40, and 10KT405 filings in the EDGAR database
-
-    # Check the year validity
-    if (!is.numeric(filing.year)) {
-        cat("Please check the input year.")
-        return()
-    }
+  ### Check for valid user agent
+  options(warn = -1)
+  
+  ### Check for valid user agent
+  if (is.null(useragent)) {
+    stop(
+      "You must provide a valid 'useragent' in the form of 'Your Name Contact@domain.com'.
+       Visit https://www.sec.gov/os/accessing-edgar-data for more information"
+    )
+  }
+  if (!is.numeric(filing.year)) {
+    stop("Input year(s) is not numeric.")
+  }
+  
+  output <- getFilings(
+    cik.no = cik.no,
+    form.type = f.type ,
+    filing.year,
+    quarter = c(1, 2, 3, 4),
+    downl.permit = "y",
+    useragent
+  )
+  
+  if (nrow(output) == 0) {
+    stop(
+      "No filing information found for given CIK(s) and Form Type in the mentioned year(s)/quarter(s).\n"
+    )}
     
-    output <- getFilings(cik.no = cik.no, form.type = f.type , filing.year, 
-						 quarter = c(1, 2, 3, 4), downl.permit = "y", useragent)
-    
-    if (is.null(output)){
-      cat("No annual statements found for given CIK(s) and year(s).")
-      return()
-    }
-    
-    cat("Extracting 'Item 7' section...\n")
-    
-    progress.bar <- txtProgressBar(min = 0, max = nrow(output), style = 3)
+    cat("Extracting 'Item 7' section\n")
     
     # Function for text cleaning
     CleanFiling2 <- function(text) {
-      
       text <- gsub("[[:digit:]]+", "", text)  ## remove Alphnumerics
       
       text <- gsub("\\s{1,}", " ", text)
       
-      text <- gsub('\"',"", text)
+      text <- gsub('\"', "", text)
       
       #text <- RemoveStopWordsFilings(text)
       
       return(text)
     }
-
+    
     new.dir <- paste0("edgar_MgmtDisc")
     dir.create(new.dir)
     
     output$extract.status <- 0
     
     output$company.name <- toupper(as.character(output$company.name))
-    output$company.name <- gsub("\\s{2,}", " ",output$company.name)
+    output$company.name <- gsub("\\s{2,}", " ", output$company.name)
+    
+    p <- progressr::progressor(along = 1:nrow(output))
     
     for (i in 1:nrow(output)) {
-        f.type <- gsub("/", "", output$form.type[i])
-        cname <- gsub("\\s{2,}", " ",output$company.name[i])
-        year <- output$filing.year[i]
-        cik <- output$cik[i]
-        date.filed <- output$date.filed[i]
-        accession.number <- output$accession.number[i]
+      f.type <- gsub("/", "", output$form.type[i])
+      cname <- gsub("\\s{2,}", " ", output$company.name[i])
+      year <- output$filing.year[i]
+      cik <- output$cik[i]
+      date.filed <- output$date.filed[i]
+      accession.number <- output$accession.number[i]
+      
+      dest.filename <- paste0(
+        "edgar_Filings/Form ",
+        f.type,
+        "/",
+        cik,
+        "/",
+        cik,
+        "_",
+        f.type,
+        "_",
+        date.filed,
+        "_",
+        accession.number,
+        ".txt"
+      )
+      
+      ## This is for output Item 7 file path
+      filename2 <- paste0(new.dir,
+                          '/',
+                          cik,
+                          "_",
+                          f.type,
+                          "_",
+                          date.filed,
+                          "_",
+                          accession.number,
+                          ".txt")
+      
+      if (file.exists(filename2)) {
+        output$extract.status[i] <- 1
+        next
+      }
+      
+      # Read filing
+      filing.text <- readLines(dest.filename)
+      
+      # Extract data from first <DOCUMENT> to </DOCUMENT>
+      tryCatch({
+        filing.text <- filing.text[(grep("<DOCUMENT>", filing.text, ignore.case = TRUE)[1]):(grep("</DOCUMENT>", filing.text, ignore.case = TRUE)[1])]
+      }, error = function(e) {
+        filing.text <- filing.text ## In case opening and closing DOCUMENT TAG not found, consider full web page
+      })
+      
+      # See if 10-K is in XLBR or old text format
+      if (any(
+        grepl(
+          pattern = "<xml>|<type>xml|<html>|10k.htm|<XBRL>",
+          filing.text,
+          ignore.case = T
+        )
+      )) {
+        doc <- XML::htmlParse(
+          filing.text,
+          asText = TRUE,
+          useInternalNodes = TRUE,
+          addFinalizer = FALSE
+        )
         
-        dest.filename <- paste0("edgar_Filings/Form ", f.type, 
-                                "/", cik, "/", cik, "_", f.type, "_", 
-                                date.filed, "_", accession.number, ".txt")
-								
-		## This is for output Item 7 file path
-		filename2 <- paste0(new.dir, '/',cik, "_", f.type, "_", date.filed, 
-                            "_", accession.number, ".txt")
-							
-		if(file.exists(filename2)){
-			output$extract.status[i] <- 1
-			next
-		}
-	
-        # Read filing
-        filing.text <- readLines(dest.filename)
+        f.text <- XML::xpathSApply(
+          doc,
+          "//text()[not(ancestor::script)][not(ancestor::style)][not(ancestor::noscript)][not(ancestor::form)]",
+          XML::xmlValue
+        )
         
-        # Extract data from first <DOCUMENT> to </DOCUMENT>
-        tryCatch({
-          filing.text <- filing.text[(grep("<DOCUMENT>", filing.text, ignore.case = TRUE)[1]):(grep("</DOCUMENT>", 
-                                                                                                    filing.text, ignore.case = TRUE)[1])]
-        }, error = function(e) {
-          filing.text <- filing.text ## In case opening and closing DOCUMENT TAG not found, consider full web page
-        })
+        f.text <- iconv(f.text, "latin1", "ASCII", sub = " ")
         
-        # See if 10-K is in XLBR or old text format
-        if (any(grepl(pattern = "<xml>|<type>xml|<html>|10k.htm|<XBRL>", filing.text, ignore.case = T))) {
-            
-          doc <- XML::htmlParse(filing.text, asText = TRUE, useInternalNodes = TRUE, addFinalizer = FALSE)
-                      
-          f.text <- XML::xpathSApply(doc, "//text()[not(ancestor::script)][not(ancestor::style)][not(ancestor::noscript)][not(ancestor::form)]", 
-          XML::xmlValue)
-                      
-          f.text <- iconv(f.text, "latin1", "ASCII", sub = " ")
-          			
-          ## Free up htmlParse document to avoid memory leakage, this calls C function
-          #.Call('RS_XML_forceFreeDoc', doc, package= 'XML')
-            
-        } else {
-            f.text <- filing.text
+        ## Free up htmlParse document to avoid memory leakage, this calls C function
+        #.Call('RS_XML_forceFreeDoc', doc, package= 'XML')
+        
+      } else {
+        f.text <- filing.text
+      }
+      
+      # Preprocessing the filing text
+      f.text <- gsub("\\n|\\t|$", " ", f.text)
+      f.text <- gsub("^\\s{1,}", "", f.text)
+      f.text <- gsub(" s ", " ", f.text)
+      
+      # Check for empty Lines and delete it
+      empty.lnumbers <- grep("^\\s*$", f.text)
+      
+      if (length(empty.lnumbers) > 0) {
+        f.text <- f.text[-empty.lnumbers]  ## Remove all lines only with space
+      }
+      
+      # Get MD&A sections
+      # M&D section is in Item 7 for 10-K, 10-K405 and in Item 6 for 10KSB and 10KSB40
+      if (f.type == "10-K" | f.type == "10-K405") {
+        startline <- grep("^Item\\s{0,}7\\.{0,}[^A.|\\(A\\)]",
+                          f.text,
+                          ignore.case = TRUE)
+        endline <- grep("^Item\\s{0,}7\\.{0,}(A|\\(A\\)|\\.A)",
+                        f.text,
+                        ignore.case = TRUE)
+        
+        # if don't have Item 7A, then take up to Item 8
+        # but also check if Item 7A match different number of times to Item 7.
+        # if this is the case and Item 7A match is before the second or subsequent match for Item 7, extraction will be faulty use Item 8 as delimiter in this case
+        if (length(endline) == 0 |
+            (length(endline) != length(startline) &
+             !all(endline - startline >= 0))) {
+          endline <- grep("^Item\\s{0,}8", f.text, ignore.case = TRUE)
         }
         
-        # Preprocessing the filing text
-        f.text <- gsub("\\n|\\t|$", " ", f.text)
-        f.text <- gsub("^\\s{1,}", "", f.text)
-        f.text <- gsub(" s ", " ", f.text)
+        # if more than one match is identified, determine which one to use
+        # use the match that that covers the most lines
+        # when a table of content in the source of the double match there will be few lines between start and end line
+        # so take the match that covers more lines
+        if (length(startline) >= 2 && length(endline)  >= 2) {
+          startline <- startline[which.max(endline - startline)]
+          endline <- endline[which.max(endline - startline)]
+        }
+      } else {
+        startline <- grep("^Item\\s{0,}6", f.text, ignore.case = TRUE)
+        endline <- grep("^Item\\s{0,}7", f.text, ignore.case = TRUE)
         
-        # Check for empty Lines and delete it
-        empty.lnumbers <- grep("^\\s*$", f.text)
-        
-        if (length(empty.lnumbers) > 0) {
-            f.text <- f.text[-empty.lnumbers]  ## Remove all lines only with space
+        # if more than one match is identified, determine which one to use
+        # check if both startline and endline have two matches
+        # if this is the case use the match where start line is before endline
+        if (length(endline) != length(startline) &
+            !all(endline - startline >= 0)) {
+          startline <- startline[which.max(endline - startline)]
+          endline <- endline[which.max(endline - startline)]
         }
         
-        
-        # Get MD&A sections
-        # M&D section is in Item 7 for 10-K, 10-K405 and in Item 6 for 10KSB and 10KSB40
-        if (f.type == "10-K" | f.type == "10-K405"){
-          
-          startline <- grep("^Item\\s{0,}7\\.{0,}[^A.|\\(A\\)]", f.text, ignore.case = TRUE)
-          endline <- grep("^Item\\s{0,}7\\.{0,}(A|\\(A\\)|\\.A)", f.text, ignore.case = TRUE)
-          
-          # if don't have Item 7A, then take up to Item 8
-          # but also check if Item 7A match different number of times to Item 7.
-          # if this is the case and Item 7A match is before the second or subsequent match for Item 7, extraction will be faulty use Item 8 as delimiter in this case
-          if (length(endline) == 0 | (length(endline) != length(startline) & !all(endline - startline >= 0))) {
-            endline <- grep("^Item\\s{0,}8", f.text, ignore.case = TRUE)
-          }
-          
-          # if more than one match is identified, determine which one to use
-          # use the match that that covers the most lines 
-          # when a table of content in the source of the double match there will be few lines between start and end line
-          # so take the match that covers more lines
-          if (length(startline) >= 2 && length(endline)  >= 2) {
+        # use the match that that covers the most lines
+        # when a table of content in the source of the double match there will be few lines between start and end line
+        # so take the match that covers more lines
+        if (length(startline) >= 2 && length(endline) >= 2) {
             startline <- startline[which.max(endline - startline)]
             endline <- endline[which.max(endline - startline)]
           }
-        } else {
-          startline <- grep("^Item\\s{0,}6", f.text, ignore.case = TRUE)
-          endline <- grep("^Item\\s{0,}7", f.text, ignore.case = TRUE)
-          
-          # if more than one match is identified, determine which one to use
-          # check if both startline and endline have two matches
-          # if this is the case use the match where start line is before endline
-          if (length(endline) != length(startline) & !all(endline - startline >= 0)) {
-            startline <- startline[which.max(endline - startline)]
-            endline <- endline[which.max(endline - startline)]
-          }
-          
-          # use the match that that covers the most lines 
-          # when a table of content in the source of the double match there will be few lines between start and end line
-          # so take the match that covers more lines
-          if (length(startline) >= 2 && length(endline) >= 2) {
-            startline <- startline[which.max(endline - startline)]
-            endline <- endline[which.max(endline - startline)]
-          }
           
         }
-        
         
         md.dicusssion <- NA
         words.count <- 0
@@ -231,20 +279,13 @@ getMgmtDisc <- function(cik.no, filing.year, useragent="" ) {
         }
         
         # update progress bar
-        setTxtProgressBar(progress.bar, i)
+        p()
     }
     
     ## convert dates into R dates
     output$date.filed <- as.Date(as.character(output$date.filed), "%Y-%m-%d")
 
-    # Close progress bar
-    close(progress.bar)
-    
-    output$quarter <- NULL
-    output$filing.year <- NULL
-    names(output)[names(output) == 'status'] <- 'downld.status'
-    
-    cat("MD&A section texts are stored in 'edgar_MgmtDisc' directory.")
+    cat("MD&A section texts are stored in 'edgar_MgmtDisc' directory")
     
     return(output)
 }

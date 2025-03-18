@@ -17,7 +17,7 @@ form.type = 'ALL' if need to download all forms.}
 
 \item{word.list}{vector of words to search in the filing}
 
-\item{useragent}{Should be in the form of "YourName Contact@domain.com"}
+\item{useragent}{Should be in the form of "Your Name Contact@domain.com"}
 }
 \value{
 Function returns dataframe containing filing information and the

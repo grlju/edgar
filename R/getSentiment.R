@@ -338,24 +338,16 @@ getSentiment <- function(cik.no,
       output$lm.litigious.count[i] <- lm.litigious.count
       output$hv.negative.count[i] <- hv.negative.count
       
-      if (i %% 10 == 0) {
-        p()
-      }
-      return(output)
+      p()
+      return(output[i,])
     }
   )
   
   output <- do.call(rbind, results)
-  
-  #names(output)[names(output) == 'status'] <- 'downld.status'
-  output$status <- NULL
-  output$quarter <- NULL
-  output$filing.year <- NULL
   
   ## convert dates into R dates
   output$date.filed <- as.Date(as.character(output$date.filed), "%Y-%m-%d")
   
   return(output)
 }
-
 globalVariables('LMMasterDictionary')

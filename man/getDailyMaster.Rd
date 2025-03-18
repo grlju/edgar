@@ -18,18 +18,18 @@ Function returns filings information in a dataframe format.
 \code{getDailyMaster} retrieves daily master index from the U.S. SEC EDGAR server.
 }
 \details{
-getDailyMaster function takes date as an input parameter from a user,  
-and downloads master index for the date from the U.S. SEC EDGAR server 
-www.sec.gov/Archives/edgar/daily-index/. It strips headers 
+getDailyMaster function takes date as an input parameter from a user,
+and downloads master index for the date from the U.S. SEC EDGAR server
+www.sec.gov/Archives/edgar/daily-index/. It strips headers
 and converts this daily filing information into dataframe format.
-Function creates new directory 'edgar_DailyMaster' into working directory 
-to save these downloaded daily master index files in Rda format. 
-User must follow the US SEC's fair access policy, i.e. download only what you 
+Function creates new directory 'edgar_DailyMaster' into working directory
+to save these downloaded daily master index files in Rda format.
+User must follow the US SEC's fair access policy, i.e. download only what you
 need and limit your request rates, see www.sec.gov/os/accessing-edgar-data.
 }
 \examples{
 \dontrun{
 
 output <- getDailyMaster('08/09/2016', useragent)
-} 
+}
 }
