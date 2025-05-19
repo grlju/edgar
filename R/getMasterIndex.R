@@ -21,6 +21,14 @@
 #' 
 #' @param useragent Should be in the form of "YourName Contact@domain.com"
 #' 
+#' @param use_proxy Logical. If TRUE, HTTP requests will use a proxy connection.
+#' 
+#' @param proxy_url Character. URL of the proxy server. Required if \code{use_proxy = TRUE}.
+#' 
+#' @param proxy_user Character. Username for proxy authentication. Required if \code{use_proxy = TRUE}.
+#' 
+#' @param proxy_pass Character. Password for proxy authentication. Required if \code{use_proxy = TRUE}.
+#' 
 #' @return Function downloads quarterly master index files and stores them 
 #' into the mentioned directory.
 #'   
@@ -41,10 +49,15 @@
 #' @import httr2
 #' @importFrom R.utils gunzip
 
-getMasterIndex <- function(filing.year, useragent = NULL) {
-  
+getMasterIndex <- function(filing.year, 
+                           useragent = NULL, 
+                           use_proxy = FALSE,
+                           proxy_url = NULL,
+                           proxy_user = NULL,
+                           proxy_pass = NULL
+                           ) 
+  {
   options(warn = -1)
-  
   ### Check for valid user agent
   if (is.null(useragent)) {
     stop(
@@ -58,23 +71,33 @@ getMasterIndex <- function(filing.year, useragent = NULL) {
   
   UA <- paste0("Mozilla/5.0 (", useragent, ")")
   
+  # check if use proxy is provided
+  if (use_proxy) {
+    if (is.null(proxy_url) || is.null(proxy_user) || is.null(proxy_pass)) {
+      stop("When 'use_proxy = TRUE', 'proxy_url', 'proxy_user', and 'proxy_pass' must all be provided.")
+    }
+  }
+  
   # function to download file and return FALSE if download error
-  # Throttle to 10 request every 1 seconds, current rate limit is 10 requests per 1 second
-  # https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data
-  # Retry 20 times on transient errors
-  DownloadSECFile <- function(link, dfile, UA) {
+  # Throttle to 10 requests every 2 second (current SEC rate limit is 10 per second)
+  # Retry 20 times on transient errors (429, 500, 503)
+  DownloadSECFile <- function(link, dfile, UA, use_proxy, proxy_url, proxy_user, proxy_pass) {
     tryCatch({
-      req <- request(link) |>
-        req_headers(`User-Agent` = UA, Connection = "keep-alive") |>
-        req_throttle(capacity = 10, fill_time_s = 1) |>  
-        req_retry(max_tries = 20, retry_on_failure = TRUE, is_transient = \(resp) resp_status(resp) %in% c(429, 500, 503)) |>
-        req_perform(path = dfile) 
-      
-      if (resp_status(req) == 200) {
-        return(TRUE)
-      } else {
-        return(FALSE)
+      req <- httr2::request(link) |>
+        httr2::req_headers(`User-Agent` = UA, Connection = "keep-alive") |>
+        httr2::req_throttle(capacity = 10, fill_time_s = 2) |>
+        httr2::req_retry(
+          max_tries = 20,
+          retry_on_failure = TRUE,
+          is_transient = \(resp) resp_status(resp) %in% c(429, 500, 503),
+          backoff = function(attempt) min(60, 2 ^ attempt)
+        )
+      # Apply proxy if requested
+      if (use_proxy) {
+        req <- req |> httr2::req_proxy(url = proxy_url, username = proxy_user, password = proxy_pass)
       }
+      resp <- httr2::req_perform(req, path = dfile)
+      return(httr2::resp_status(resp) == 200)
     }, error = function(e) {
       return(FALSE)
     })
@@ -108,7 +131,7 @@ getMasterIndex <- function(filing.year, useragent = NULL) {
           link <- paste0("https://www.sec.gov/Archives/edgar/full-index/", year, "/QTR", quarter, "/master.gz")
           
           ### Download the file
-          res <- DownloadSECFile(link, dfile, UA)
+          res <- DownloadSECFile(link, dfile, UA, use_proxy, proxy_url, proxy_user, proxy_pass)
           
           if (res) {
             # Unzip gz file
