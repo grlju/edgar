@@ -10,6 +10,14 @@ getMasterIndex(filing.year, useragent)
 \item{filing.year}{vector of integer containing filing years.}
 
 \item{useragent}{Should be in the form of "YourName Contact@domain.com"}
+
+\item{use_proxy}{Logical. If TRUE, HTTP requests will use a proxy connection.}
+
+\item{proxy_url}{Character. URL of the proxy server. Required if \code{use_proxy = TRUE}.}
+
+\item{proxy_user}{Character. Username for proxy authentication. Required if \code{use_proxy = TRUE}.}
+
+\item{proxy_pass}{Character. Password for proxy authentication. Required if \code{use_proxy = TRUE}.}
 }
 \value{
 Function downloads quarterly master index files and stores them 
@@ -39,10 +47,10 @@ useragent <- "YourName Contact@domain.com"
 
 getMasterIndex(2006, useragent) 
 ## Downloads quarterly master index files for 2006 and 
-## stores into yearly 2006master.Rda file.
+## stores into yearly 2006master.rds file.
 
 getMasterIndex(c(2006, 2008), useragent) 
 ## Downloads quarterly master index files for 2006 and 2008, and 
-## stores into 2006master.Rda and 2008master.Rda files.
+## stores into 2006master.rda and 2008master.rds files.
 }
 }

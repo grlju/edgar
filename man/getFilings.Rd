@@ -24,6 +24,14 @@ to decide in case if number of filings are large. Setting downl.permit = "y"
 will not ask for user permission to download filings.}
 
 \item{useragent}{Should be in the form of "Your Name Contact@domain.com"}
+
+\item{use_proxy}{Logical. If TRUE, HTTP requests will use a proxy connection.}
+
+\item{proxy_url}{Character. URL of the proxy server. Required if \code{use_proxy = TRUE}.}
+
+\item{proxy_user}{Character. Username for proxy authentication. Required if \code{use_proxy = TRUE}.}
+
+\item{proxy_pass}{Character. Password for proxy authentication. Required if \code{use_proxy = TRUE}.}
 }
 \value{
 Function downloads EDGAR filings and returns download status in dataframe

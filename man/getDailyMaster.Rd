@@ -10,6 +10,14 @@ getDailyMaster(input.date, useragent)
 \item{input.date}{in character format 'mm/dd/YYYY'.}
 
 \item{useragent}{Should be in the form of "YourName Contact@domain.com"}
+
+\item{use_proxy}{Logical. If TRUE, HTTP requests will use a proxy connection.}
+
+\item{proxy_url}{Character. URL of the proxy server. Required if \code{use_proxy = TRUE}.}
+
+\item{proxy_user}{Character. Username for proxy authentication. Required if \code{use_proxy = TRUE}.}
+
+\item{proxy_pass}{Character. Password for proxy authentication. Required if \code{use_proxy = TRUE}.}
 }
 \value{
 Function returns filings information in a dataframe format.
