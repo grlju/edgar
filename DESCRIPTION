@@ -13,7 +13,7 @@ Authors@R: c(person(given = "Gunratan",
                     email = "bharatspatil@gmail.com"))
 Maintainer: Gunratan Lonare <lonare.gunratan@gmail.com>
 Contributor: Grigorij Ljubownikow <g.ljubownikow@auckland.ac.nz>
-Depends: R (>= 3.5.0)
+Depends: R (>= 4.1.0)
 Imports: R.utils, tm, XML, stringr, stringi, qdapRegex, httr2, anytime, future.apply, progressr
 Description: In the USA, companies file different forms with the U.S. 
     Securities and Exchange Commission (SEC) through EDGAR (Electronic 
