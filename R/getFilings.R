@@ -111,17 +111,22 @@ getFilings <- function(
           max_tries = 20,
           retry_on_failure = TRUE,
           is_transient = \(resp) resp_status(resp) %in% c(429, 500, 503),
-          backoff = function(attempt) min(60, 2 ^ attempt)
+          backoff = function(attempt) min(60, 2 ^ attempt), 
+          failure_threshold = 10
         )
       # Apply proxy if requested
       if (use_proxy) {
         req <- req |> httr2::req_proxy(url = proxy_url, username = proxy_user, password = proxy_pass)
       }
-      resp <- httr2::req_perform(req, path = dfile)
-      return(httr2::resp_status(resp) == 200)
+      httr2::req_perform(req, path = dfile)
     }, error = function(e) {
       return(FALSE)
     })
+    if (file.exists(dfile) && file.info(dfile)$size > 0) {
+      return(TRUE)
+    } else {
+      return(FALSE)
+    }
   }
   
   # Initialize master index storage

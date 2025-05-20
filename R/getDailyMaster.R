@@ -16,7 +16,15 @@
 #' @param input.date in character format 'mm/dd/YYYY'.
 #'
 #' @param useragent Should be in the form of "YourName Contact@domain.com"
-#'
+#' 
+#' @param use_proxy Logical. If TRUE, HTTP requests will use a proxy connection.
+#' 
+#' @param proxy_url Character. URL of the proxy server. Required if \code{use_proxy = TRUE}.
+#' 
+#' @param proxy_user Character. Username for proxy authentication. Required if \code{use_proxy = TRUE}.
+#' 
+#' @param proxy_pass Character. Password for proxy authentication. Required if \code{use_proxy = TRUE}.
+
 #' @return Function returns filings information in a dataframe format.
 #'
 #' @examples
@@ -27,9 +35,12 @@
 #' @export
 #' @import httr2
 
-getDailyMaster <- function(input.date, useragent = NULL) {
-  
-  getMasterIndex(2006, useragent)
+getDailyMaster <- function(input.date, 
+                           useragent = NULL,
+                           use_proxy = FALSE,
+                           proxy_url = NULL,
+                           proxy_user = NULL,
+                           proxy_pass = NULL) {
   
   dir.create("edgar_DailyMaster")
   
@@ -60,145 +71,144 @@ getDailyMaster <- function(input.date, useragent = NULL) {
   UA <- paste0("Mozilla/5.0 (", useragent, ")")
   
   # function to download file and return FALSE if download error
-  # function to download file and return FALSE if download error
-  # Throttle to 10 request every 1 seconds, current rate limit is 10 requests per 1 second
-  # https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data
-  # Retry 20 times on transient errors
-  DownloadSECFile <- function(link, dfile, UA) {
+  # Throttle to 10 requests every 2 second (current SEC rate limit is 10 per second)
+  # Retry 20 times on transient errors (429, 500, 503)
+  DownloadSECFile <- function(link, dfile, UA, use_proxy, proxy_url, proxy_user, proxy_pass) {
     tryCatch({
-      req <- request(link) |>
-        req_headers(`User-Agent` = UA, Connection = "keep-alive") |>
-        req_throttle(capacity = 10, fill_time_s = 1) |>
-        req_retry(
+      req <- httr2::request(link) |>
+        httr2::req_headers(`User-Agent` = UA, Connection = "keep-alive") |>
+        httr2::req_throttle(capacity = 10, fill_time_s = 2) |>
+        httr2::req_retry(
           max_tries = 20,
           retry_on_failure = TRUE,
-          is_transient = \(resp) resp_status(resp) %in% c(429, 500, 503)
-        ) |>
-        req_perform(path = dfile)
-      
-      if (resp_status(req) == 200) {
-        return(TRUE)
-      } else {
-        return(FALSE)
+          is_transient = \(resp) resp_status(resp) %in% c(429, 500, 503),
+          backoff = function(attempt) min(60, 2 ^ attempt), 
+          failure_threshold = 10
+        )
+      # Apply proxy if requested
+      if (use_proxy) {
+        req <- req |> httr2::req_proxy(url = proxy_url, username = proxy_user, password = proxy_pass)
       }
+      httr2::req_perform(req, path = dfile)
     }, error = function(e) {
       return(FALSE)
     })
+    if (file.exists(dfile) && file.info(dfile)$size > 0) {
+      return(TRUE)
+    } else {
+      return(FALSE)
+    }
   }
+  
+  # function for downloading daily Index
+  GetDailyInfo <- function(day, month, year) {
+    link1 <- paste0(
+      "https://www.sec.gov/Archives/edgar/daily-index/",
+      year,
+      "/QTR",
+      ceiling(as.integer(month) / 3),
+      "/master.",
+      date,
+      ".idx"
+    )
+    
+    link2 <- paste0(
+      "https://www.sec.gov/Archives/edgar/daily-index/",
+      year,
+      "/QTR",
+      ceiling(as.integer(month) / 3),
+      "/master.",
+      date,
+      ".idx"
+    )
+    
+    link3 <- paste0(
+      "https://www.sec.gov/Archives/edgar/daily-index/",
+      year,
+      "/QTR",
+      ceiling(as.integer(month) / 3),
+      "/master.",
+      substr(as.character(year), 3, 4),
+      month,
+      day,
+      ".idx"
+    )
+    
+    link4 <- paste0(
+      "https://www.sec.gov/Archives/edgar/daily-index/",
+      year,
+      "/QTR",
+      ceiling(as.integer(month) / 3),
+      "/master.",
+      date,
+      ".idx"
+    )
+    
+    if (year < 1999) {
+      res <- DownloadSECFile(link3, filename, UA, use_proxy, proxy_url, proxy_user, proxy_pass)
+    }
+    
+    if (year > 1998 && year < 2012) {
+      res <- DownloadSECFile(link4, filename, UA, use_proxy, proxy_url, proxy_user, proxy_pass)
+    }
+    
+    if (year > 2011) {
+      res <- DownloadSECFile(link1, filename, UA, use_proxy, proxy_url, proxy_user, proxy_pass)
+      if (!isTRUE(res)) {
+        res <- DownloadSECFile(link2, filename, UA, use_proxy, proxy_url, proxy_user, proxy_pass)
+      }
+    }
+    
+    if (res) {
+      # Removing ''' so that scan with '|' not fail due to occurrence of ''' in company name
+      temp.data <- gsub("'", "", readLines(filename))
+      temp.data <- iconv(temp.data, "latin1", "ASCII", sub = "")
+      
+      # writting back to storage
+      writeLines(temp.data, filename)
+      
+      # Find line number where header description ends
+      header.end <- grep("--------------------------------------------------------",
+                         temp.data)
+      
+      scrapped.data <- scan(
+        filename,
+        what = list("", "", "", "", ""),
+        flush = F,
+        skip = header.end,
+        sep = "|",
+        quiet = T
+      )
+      
+      final.data <- data.frame(
+        cik = scrapped.data[[1]],
+        company.name = scrapped.data[[2]],
+        form.type = scrapped.data[[3]],
+        date.filed = as.Date(scrapped.data[[4]], "%Y%m%d"),
+        edgar.link = scrapped.data[[5]]
+      )
+      
+      ## Save daily master index in Rda format
+      file.remove(filename)
+      saveRDS(final.data, file = paste0(filename, ".rds"))
+      
+      return(final.data)
+    } else{
+      stop(" Daily master index is not availbale for this date.")
+    }
+  }
+  
   date <- paste0(year, month, day)
   
   filename <- paste0("edgar_DailyMaster/daily_idx_", date)
   
-  if(file.exists(paste0(filename, ".Rda"))) {
-    load(paste0(filename, ".Rda"))
+  if(file.exists(paste0(filename, ".rds"))) {
+    final.data <- readRDS(paste0(filename, ".rds"))
     return(final.data)
   } else {
-    # function for downloading daily Index
-    GetDailyInfo <- function(day, month, year) {
-      link1 <- paste0(
-        "https://www.sec.gov/Archives/edgar/daily-index/",
-        year,
-        "/QTR",
-        ceiling(as.integer(month) / 3),
-        "/master.",
-        date,
-        ".idx"
-      )
-      
-      link2 <- paste0(
-        "https://www.sec.gov/Archives/edgar/daily-index/",
-        year,
-        "/QTR",
-        ceiling(as.integer(month) / 3),
-        "/master.",
-        date,
-        ".idx"
-      )
-      
-      link3 <- paste0(
-        "https://www.sec.gov/Archives/edgar/daily-index/",
-        year,
-        "/QTR",
-        ceiling(as.integer(month) / 3),
-        "/master.",
-        substr(as.character(year), 3, 4),
-        month,
-        day,
-        ".idx"
-      )
-      
-      link4 <- paste0(
-        "https://www.sec.gov/Archives/edgar/daily-index/",
-        year,
-        "/QTR",
-        ceiling(as.integer(month) / 3),
-        "/master.",
-        date,
-        ".idx"
-      )
-      
-      down.success = FALSE
-      if (year < 1999) {
-        down.success <- DownloadSECFile(link3, filename, UA)
-      }
-      
-      if (year > 1998 && year < 2012) {
-        down.success <- DownloadSECFile(link4, filename, UA)
-      }
-      
-      if (year > 2011) {
-        fun.return1 <- DownloadSECFile(link1, filename, UA)
-        if (fun.return1 && file.size(filename) > 500) {
-          down.success = TRUE
-          
-        } else {
-          fun.return2 <- DownloadSECFile(link2, filename, UA)
-          if (fun.return2) {
-            down.success = TRUE
-          }
-        }
-      }
-      
-      if (down.success) {
-        # Removing ''' so that scan with '|' not fail due to occurrence of ''' in company name
-        temp.data <- gsub("'", "", readLines(filename))
-        temp.data <- iconv(temp.data, "latin1", "ASCII", sub = "")
-        
-        # writting back to storage
-        writeLines(temp.data, filename)
-        
-        # Find line number where header description ends
-        header.end <- grep("--------------------------------------------------------",
-                           temp.data)
-        
-        scrapped.data <- scan(
-          filename,
-          what = list("", "", "", "", ""),
-          flush = F,
-          skip = header.end,
-          sep = "|",
-          quiet = T
-        )
-        
-        final.data <- data.frame(
-          cik = scrapped.data[[1]],
-          company.name = scrapped.data[[2]],
-          form.type = scrapped.data[[3]],
-          date.filed = as.Date(scrapped.data[[4]], "%Y%m%d"),
-          edgar.link = scrapped.data[[5]]
-        )
-        
-        ## Save daily master index in Rda format
-        file.remove(filename)
-        save(final.data, file = paste0(filename, ".Rda"))
-        
-        return(final.data)
-      } else{
-        stop(" Daily master index is not availbale for this date.")
-      }
-    }
     ## Call above GetDailyInfo function
-    return(GetDailyInfo(day, month, year))
+    final.data <- GetDailyInfo(day, month, year)
+    return(final.data)
   }
 }
 globalVariables("final.data")

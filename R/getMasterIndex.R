@@ -39,11 +39,11 @@
 #' 
 #' getMasterIndex(2006, useragent) 
 #' ## Downloads quarterly master index files for 2006 and 
-#' ## stores into yearly 2006master.Rda file.
+#' ## stores into yearly 2006master.rds file.
 #' 
 #' getMasterIndex(c(2006, 2008), useragent) 
 #' ## Downloads quarterly master index files for 2006 and 2008, and 
-#' ## stores into 2006master.Rda and 2008master.Rda files.
+#' ## stores into 2006master.rda and 2008master.rds files.
 #'}
 #' @export
 #' @import httr2
@@ -90,17 +90,22 @@ getMasterIndex <- function(filing.year,
           max_tries = 20,
           retry_on_failure = TRUE,
           is_transient = \(resp) resp_status(resp) %in% c(429, 500, 503),
-          backoff = function(attempt) min(60, 2 ^ attempt)
+          backoff = function(attempt) min(60, 2 ^ attempt), 
+          failure_threshold = 10
         )
       # Apply proxy if requested
       if (use_proxy) {
         req <- req |> httr2::req_proxy(url = proxy_url, username = proxy_user, password = proxy_pass)
       }
-      resp <- httr2::req_perform(req, path = dfile)
-      return(httr2::resp_status(resp) == 200)
+      httr2::req_perform(req, path = dfile)
     }, error = function(e) {
       return(FALSE)
     })
+    if (file.exists(dfile) && file.info(dfile)$size > 0) {
+      return(TRUE)
+    } else {
+      return(FALSE)
+    }
   }
   
     dir.create("edgar_MasterIndex")
@@ -189,6 +194,6 @@ getMasterIndex <- function(filing.year,
         }
         
         assign(paste0(year, "master"), year.master)
-        save(year.master, file = paste0("edgar_MasterIndex/", year, "master.Rda"))
+        saveRDS(year.master, file = paste0("edgar_MasterIndex/", year, "master.rds"))
       }
 }
