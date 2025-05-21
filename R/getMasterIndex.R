@@ -83,18 +83,6 @@ getMasterIndex <- function(filing.year,
   # Retry 20 times on transient errors (429, 500, 503)
   DownloadSECFile <- function(link, dfile, UA, use_proxy, proxy_url, proxy_user, proxy_pass) {
     tryCatch({
-      
-      # Set throttle parameters based on proxy usage
-      if (use_proxy) {
-        # Faster throttle when using proxy (since each proxy is isolated) but still keeping it reasonable
-        throttle_capacity <- 20   # higher burst capacity
-        throttle_fill_time <- 1   # faster refill rate
-      } else {
-        # Slower throttle for single-IP use
-        throttle_capacity <- 10
-        throttle_fill_time <- 2
-      }
-      
       req <- httr2::request(link) |>
         httr2::req_headers(`User-Agent` = UA, Connection = "keep-alive") |>
         httr2::req_throttle(capacity = throttle_capacity, fill_time_s = throttle_fill_time) |>
