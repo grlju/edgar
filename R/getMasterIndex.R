@@ -112,10 +112,16 @@ getMasterIndex <- function(filing.year,
     
     status.array <- data.frame()
     
-    for (i in 1:length(filing.year)) {
+    for (year in filing.year) {
         
-        year <- filing.year[i]
-        
+      rdsfile_year <- paste0("edgar_MasterIndex/", year, "master.rds")
+      
+      # Skip entire year if RDS already exists
+      if (file.exists(rdsfile_year)) {
+        cat("Master Index for year", year, "already exists (RDS file found)\n")
+        next
+      }
+      
         year.master <- data.frame()
         
         quarterloop <- 4
@@ -134,6 +140,12 @@ getMasterIndex <- function(filing.year,
           
           # Form a link to download master file
           link <- paste0("https://www.sec.gov/Archives/edgar/full-index/", year, "/QTR", quarter, "/master.gz")
+          
+          # Skip download if the file already exists
+          if (file.exists(file)) {
+            cat("Master Index for quarter", quarter, "already exists\n")
+            next
+          }
           
           ### Download the file
           res <- DownloadSECFile(link, dfile, UA, use_proxy, proxy_url, proxy_user, proxy_pass)
