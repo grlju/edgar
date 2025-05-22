@@ -71,13 +71,13 @@ getDailyMaster <- function(input.date,
   UA <- paste0("Mozilla/5.0 (", useragent, ")")
   
   # function to download file and return FALSE if download error
-  # Throttle to 10 requests every 2 second (current SEC rate limit is 10 per second)
+  # Throttle to 10 requests every 1 second (current SEC rate limit is 10 per second)
   # Retry 20 times on transient errors (429, 500, 503)
   DownloadSECFile <- function(link, dfile, UA, use_proxy, proxy_url, proxy_user, proxy_pass) {
     tryCatch({
       req <- httr2::request(link) |>
         httr2::req_headers(`User-Agent` = UA, Connection = "keep-alive") |>
-        httr2::req_throttle(capacity = throttle_capacity, fill_time_s = throttle_fill_time) |>
+        httr2::req_throttle(capacity = 10, fill_time_s = 1) |>
         httr2::req_retry(
           max_tries = 20,
           retry_on_failure = TRUE,
