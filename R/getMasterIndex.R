@@ -142,7 +142,7 @@ getMasterIndex <- function(filing.year,
           link <- paste0("https://www.sec.gov/Archives/edgar/full-index/", year, "/QTR", quarter, "/master.gz")
           
           # Skip download if the file already exists
-          if (file.exists(file)) {
+          if (file.exists(dfile)) {
             cat("Master Index for quarter", quarter, "already exists\n")
             next
           }
