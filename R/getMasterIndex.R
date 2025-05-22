@@ -108,8 +108,8 @@ getMasterIndex <- function(filing.year,
     }
   }
   
-    dir.create("edgar_MasterIndex")
-    
+    dir.create("edgar_MasterIndex", showWarnings = FALSE)
+
     status.array <- data.frame()
     
     for (year in filing.year) {
