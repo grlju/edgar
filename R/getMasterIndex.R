@@ -7,11 +7,11 @@
 #' www.sec.gov/Archives/edgar/full-index/. It then strips headers from the 
 #' master index files, converts them into dataframe, and 
 #' merges such quarterly dataframes into yearly dataframe, and stores them 
-#' in Rda format. It has ability to download master indexes for multiple years 
+#' in rds format. It has ability to download master indexes for multiple years 
 #' based on the user input. This function creates a new directory 'edgar_MasterIndex' 
-#' into current working directory to save these Rda Master Index. Please note, for 
+#' into current working directory to save these rds Master Index. Please note, for 
 #' all other functions in this package need to locate the same working 
-#' directory to access these Rda master index files. 
+#' directory to access these rds master index files. 
 #' User must follow the US SEC's fair access policy, i.e. download only what you 
 #' need and limit your request rates, see www.sec.gov/os/accessing-edgar-data.
 #'     
@@ -43,7 +43,7 @@
 #' 
 #' getMasterIndex(c(2006, 2008), useragent) 
 #' ## Downloads quarterly master index files for 2006 and 2008, and 
-#' ## stores into 2006master.rda and 2008master.rds files.
+#' ## stores into 2006master.rds and 2008master.rds files.
 #'}
 #' @export
 #' @import httr2

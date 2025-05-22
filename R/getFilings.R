@@ -134,13 +134,13 @@ getFilings <- function(
   
   # Loop through each requested year
   for (year in filing.year) {
-    yr.master <- paste0(year, "master.Rda")
+    yr.master <- paste0(year, "master.rds")
     filepath <- file.path("edgar_MasterIndex", yr.master)
     
     if (!file.exists(filepath)) {
       getMasterIndex(year, useragent)
     }
-    load(filepath)
+    year.master <- readRDS(filepath)
     
     # Filter by form type and CIK
     types <- if (length(form.type) == 1 && form.type == "ALL") unique(year.master$form.type) else form.type
