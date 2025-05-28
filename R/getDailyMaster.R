@@ -74,30 +74,63 @@ getDailyMaster <- function(input.date,
   # Throttle to 10 requests every 1 second (current SEC rate limit is 10 per second)
   # Retry 20 times on transient errors (429, 500, 503)
   DownloadSECFile <- function(link, dfile, UA, use_proxy, proxy_url, proxy_user, proxy_pass) {
-    tryCatch({
-      req <- httr2::request(link) |>
-        httr2::req_headers(`User-Agent` = UA, Connection = "keep-alive") |>
-        httr2::req_throttle(capacity = 10, fill_time_s = 1) |>
-        httr2::req_retry(
-          max_tries = 20,
-          retry_on_failure = TRUE,
-          is_transient = \(resp) resp_status(resp) %in% c(429, 500, 503),
-          backoff = function(attempt) min(60, 2 ^ attempt), 
-          failure_threshold = 10
-        )
-      # Apply proxy if requested
-      if (use_proxy) {
-        req <- req |> httr2::req_proxy(url = proxy_url, username = proxy_user, password = proxy_pass)
+    
+    is_transient_custom <- function(resp) {
+      status <- httr2::resp_status(resp)
+      if (status %in% c(429, 500, 503)) {
+        return(TRUE)
       }
-      httr2::req_perform(req, path = dfile)
-    }, error = function(e) {
-      return(FALSE)
-    })
-    if (file.exists(dfile) && file.info(dfile)$size > 0) {
-      return(TRUE)
-    } else {
+      # Read a few lines of the content if status is 200
+      if (status == 200) {
+        content <- tryCatch(
+          httr2::resp_body_string(resp),
+          error = function(e) ""
+        )
+        return(grepl("Undeclared Automated Tool|Request Rate Threshold", content, ignore.case = TRUE))
+      }
       return(FALSE)
     }
+    
+    req <- httr2::request(link) |>
+      httr2::req_headers(`User-Agent` = UA, Connection = "keep-alive") |>
+      httr2::req_timeout(seconds = 30) |> 
+      httr2::req_throttle(capacity = 10, fill_time_s = 1) |>
+      httr2::req_retry(
+        max_tries = 20,
+        retry_on_failure = TRUE,
+        is_transient = is_transient_custom,
+        backoff = function(attempt) min(60, 2 ^ attempt), 
+        failure_threshold = 10
+      )
+    
+    # Apply proxy if requested
+    if (use_proxy) {
+      req <- req |>
+        httr2::req_proxy(url = proxy_url, username = proxy_user, password = proxy_pass)
+    }
+    
+    # Perform download
+    result <- tryCatch({
+      httr2::req_perform(req, path = dfile)
+      TRUE
+    }, error = function(e) {
+      FALSE
+    })
+    
+    if (!result || !file.exists(dfile) || file.info(dfile)$size == 0) {
+      return(FALSE)
+    }
+    
+    first_lines <- tryCatch({
+      readLines(dfile, n = 10, warn = FALSE)
+    }, error = function(e) character(0))
+    
+    if (any(grepl("Your Request Originates from an Undeclared Automated Tool|Request Rate Threshold Exceeded", first_lines))) {
+      file.remove(dfile)
+      return(FALSE)
+    }
+    
+    return(TRUE)
   }
   
   # function for downloading daily Index
