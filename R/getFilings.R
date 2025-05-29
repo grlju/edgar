@@ -79,7 +79,7 @@ getFilings <- function(
 ) {
   options(warn = -1)
   
-  ### Check for valid user agent
+  # Validate user agent
   if (is.null(useragent)) {
     stop(
       "You must provide a valid 'useragent' in the form of 'Your Name Contact@domain.com'.\n",
@@ -92,29 +92,19 @@ getFilings <- function(
   
   UA <- paste0("Mozilla/5.0 (", useragent, ")")
   
-  # check if use proxy is provided
   if (use_proxy) {
     if (is.null(proxy_url) || is.null(proxy_user) || is.null(proxy_pass)) {
       stop("When 'use_proxy = TRUE', 'proxy_url', 'proxy_user', and 'proxy_pass' must all be provided.")
     }
   }
   
-  # function to download file and return FALSE if download error
-  # Throttle to 10 requests every 1 second (current SEC rate limit is 10 per second)
-  # Retry 20 times on transient errors (429, 500, 503)
+  # Define file download function
   DownloadSECFile <- function(link, dfile, UA, use_proxy, proxy_url, proxy_user, proxy_pass) {
-    
     is_transient_custom <- function(resp) {
       status <- httr2::resp_status(resp)
-      if (status %in% c(429, 500, 503)) {
-        return(TRUE)
-      }
-      # Read a few lines of the content if status is 200
+      if (status %in% c(429, 500, 503)) return(TRUE)
       if (status == 200) {
-        content <- tryCatch(
-          httr2::resp_body_string(resp),
-          error = function(e) ""
-        )
+        content <- tryCatch(httr2::resp_body_string(resp), error = function(e) "")
         return(grepl("Undeclared Automated Tool|Request Rate Threshold", content, ignore.case = TRUE))
       }
       return(FALSE)
@@ -122,38 +112,28 @@ getFilings <- function(
     
     req <- httr2::request(link) |>
       httr2::req_headers(`User-Agent` = UA, Connection = "keep-alive") |>
-      httr2::req_timeout(seconds = 30) |> 
+      httr2::req_timeout(seconds = 30) |>
       httr2::req_throttle(capacity = 10, fill_time_s = 1) |>
       httr2::req_retry(
         max_tries = 20,
         retry_on_failure = TRUE,
         is_transient = is_transient_custom,
-        backoff = function(attempt) min(60, 2 ^ attempt), 
+        backoff = function(attempt) min(60, 2 ^ attempt),
         failure_threshold = 10
       )
     
-    # Apply proxy if requested
     if (use_proxy) {
-      req <- req |>
-        httr2::req_proxy(url = proxy_url, username = proxy_user, password = proxy_pass)
+      req <- req |> httr2::req_proxy(url = proxy_url, username = proxy_user, password = proxy_pass)
     }
     
-    # Perform download
     result <- tryCatch({
       httr2::req_perform(req, path = dfile)
       TRUE
-    }, error = function(e) {
-      FALSE
-    })
+    }, error = function(e) FALSE)
     
-    if (!result || !file.exists(dfile) || file.info(dfile)$size == 0) {
-      return(FALSE)
-    }
+    if (!result || !file.exists(dfile) || file.info(dfile)$size == 0) return(FALSE)
     
-    first_lines <- tryCatch({
-      readLines(dfile, n = 10, warn = FALSE)
-    }, error = function(e) character(0))
-    
+    first_lines <- tryCatch(readLines(dfile, n = 10, warn = FALSE), error = function(e) character(0))
     if (any(grepl("Your Request Originates from an Undeclared Automated Tool|Request Rate Threshold Exceeded", first_lines))) {
       file.remove(dfile)
       return(FALSE)
@@ -162,10 +142,8 @@ getFilings <- function(
     return(TRUE)
   }
   
-  # Initialize master index storage
+  # Prepare master index
   index.df <- data.frame()
-  
-  # Loop through each requested year
   for (year in filing.year) {
     yr.master <- paste0(year, "master.rds")
     filepath <- file.path("edgar_MasterIndex", yr.master)
@@ -173,10 +151,10 @@ getFilings <- function(
     if (!file.exists(filepath)) {
       getMasterIndex(year, useragent)
     }
-    year.master <- readRDS(filepath)
     
-    # Filter by form type and CIK
+    year.master <- readRDS(filepath)
     types <- if (length(form.type) == 1 && form.type == "ALL") unique(year.master$form.type) else form.type
+    
     subset <- year.master[
       year.master$form.type %in% types &
         year.master$quarter %in% quarter &
@@ -194,53 +172,60 @@ getFilings <- function(
   
   index.df <- index.df[order(index.df$cik, index.df$filing.year), ]
   
-  # Prompt for download
-  total.files <- nrow(index.df)
-  msg3 <- sprintf(
-    "Total filings to download = %d. Proceed? (y/n): ",
-    total.files
-  )
-  if (tolower(downl.permit) == "n") {
-    downl.permit <- readline(prompt = msg3)
+  # Generate accession number and destination file paths in parallel
+  index.df$edgar.link <- as.character(index.df$edgar.link)
+  accessions <- sapply(strsplit(index.df$edgar.link, "/"), `[`, 4)
+  index.df$accession.number <- sub("\\.txt$", "", accessions)
+  
+  # Parallel path construction
+  index.df$destfile <- future.apply::future_mapply(function(cik, ftype, date, acc) {
+    ftype_clean <- gsub("/", "", ftype)
+    destdir <- file.path("edgar_Filings", paste0("Form ", ftype_clean), cik)
+    file.path(destdir, sprintf("%s_%s_%s_%s.txt", cik, ftype_clean, date, acc))
+  }, cik = index.df$cik, ftype = index.df$form.type, date = index.df$date.filed, acc = index.df$accession.number,
+  SIMPLIFY = TRUE, USE.NAMES = FALSE)
+  
+  # Identify which files already exist
+  index.df$file_exists <- file.exists(index.df$destfile)
+  missing.df <- index.df[!index.df$file_exists, ]
+  
+  # Prompt user only if new files need downloading
+  if (nrow(missing.df) == 0) {
+    message("All requested filings already exist. No download needed.")
+    index.df$status <- "Already exists"
+    return(index.df)
+  } else {
+    msg3 <- sprintf("Total filings to download = %d. Proceed? (y/n): ", nrow(missing.df))
+    if (tolower(downl.permit) == "n") {
+      downl.permit <- readline(prompt = msg3)
+    }
+    if (tolower(downl.permit) != "y") {
+      message("Download cancelled by user.")
+      index.df$status <- ifelse(index.df$file_exists, "Already exists", "Skipped")
+      return(index.df)
+    }
   }
   
-  if (tolower(downl.permit) == "y") {
-    dir.create("edgar_Filings", showWarnings = FALSE)
-    p <- progressr::progressor(along = seq_len(total.files))
+  # Download only missing files
+  progressr::with_progress({
+    p <- progressr::progressor(along = seq_len(nrow(missing.df)))
+    missing.df$status <- NA_character_
     
-    # Prepare file destinations
-    index.df$edgar.link <- as.character(index.df$edgar.link)
-    accessions <- sapply(strsplit(index.df$edgar.link, "/"), `[`, 4)
-    index.df$accession.number <- sub("\\.txt$", "", accessions)
-    index.df$status <- NA_character_
-    
-    cat("Downloading filings...")
-    for (i in seq_len(total.files)) {
-      edgar.link <- paste0("https://www.sec.gov/Archives/", index.df$edgar.link[i])
-      ftype <- gsub("/", "", index.df$form.type[i])
-      cik <- index.df$cik[i]
-      date <- index.df$date.filed[i]
-      acc <- index.df$accession.number[i]
-      
-      destdir <- file.path("edgar_Filings", paste0("Form ", ftype), cik)
+    for (i in seq_len(nrow(missing.df))) {
+      row <- missing.df[i, ]
+      destdir <- dirname(row$destfile)
       dir.create(destdir, recursive = TRUE, showWarnings = FALSE)
-      destfile <- file.path(destdir, sprintf(
-        "%s_%s_%s_%s.txt",
-        cik, ftype, date, acc
-      ))
       
-      if (file.exists(destfile)) {
-        index.df$status[i] <- "Download success"
-      } else {
-        res <- DownloadSECFile(edgar.link, destfile, UA, use_proxy, proxy_url, proxy_user, proxy_pass)
-        if (res) {
-          index.df$status[i] <- "Download success"
-        } else {
-          index.df$status[i] <- "Download Error"
-        }
-      }
+      edgar.link <- paste0("https://www.sec.gov/Archives/", row$edgar.link)
+      res <- DownloadSECFile(edgar.link, row$destfile, UA, use_proxy, proxy_url, proxy_user, proxy_pass)
+      missing.df$status[i] <- if (res) "Download success" else "Download error"
       p()
     }
-    return(index.df)
-  }
+  })
+  
+  # Update status in full data frame
+  index.df$status <- ifelse(index.df$file_exists, "Already exists", NA_character_)
+  index.df$status[match(missing.df$destfile, index.df$destfile)] <- missing.df$status
+  
+  return(index.df)
 }
