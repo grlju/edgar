@@ -117,6 +117,7 @@ get8KItems <- function(cik.no, filing.year, useragent = NULL) {
         company.name = output$company.name[i],
         form.type = output$form.type[i],
         date.filed = output$date.filed[i],
+        accession.number = output$accession.number[i],
         event.info = event.info
       )
       p()
