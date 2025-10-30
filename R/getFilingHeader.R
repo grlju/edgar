@@ -337,6 +337,10 @@ getFilingHeader <-
         }
       }
       
+      # make sure business state are also valid states
+      combined.df[!tolower(combined.df$business.state) %in% tolower(states$state_abb), "business.state"] <-
+        NA_character_
+      
       if (i %% 10 == 0) {p()}
       return(combined.df)
       
