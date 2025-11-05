@@ -180,6 +180,23 @@ getFilingHeader <-
       if (length(secheader_line) != 0 & secheader_line > 18) {
         filing.text1 <- filing.text[1:(secheader_line - 1)]
         
+        # Try to normalize to UTF-8 safely
+        filing.text1 <- tryCatch(
+          {
+            # Detect any invalid bytes (approximate check)
+            test <- suppressWarnings(iconv(filing.text1, from = "", to = "UTF-8", sub = NA))
+            if (any(is.na(test))) {
+              iconv(filing.text1, from = "", to = "UTF-8", sub = "byte")
+            } else {
+              filing.text1
+            }
+          },
+          error = function(e) {
+            warning(sprintf("iconv() failed for %s: %s", dest.filename, e$message))
+            filing.text1  # fallback
+          }
+        )
+        
         filing.text1 <- gsub("</FILER>", "", filing.text1)
         
         period.of.report <- GetConfirmedPeriodOfReport(filing.text1)
